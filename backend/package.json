@@ -1,0 +1,31 @@
+{
+  "name": "nexus-portal-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node.js backend service for Nexus Portal.",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node ./bin/www",
+    "dev": "DEBUG=nexus-portal:* node ./bin/www",
+    "check": "node --check ./bin/www && node --check ./src/app.js && node --check ./src/routes/index.js && node --check ./src/routes/health.js && node --check ./src/services/portalCatalog.js"
+  },
+  "dependencies": {
+    "app-root-path": "^3.1.0",
+    "better-sqlite3": "^12.4.1",
+    "cookie-parser": "~1.4.4",
+    "debug": "~2.6.9",
+    "express": "~4.16.1",
+    "express-async-errors": "^3.1.1",
+    "express-http-context": "^2.0.1",
+    "http-errors": "~1.6.3",
+    "https-proxy-agent": "^7.0.6",
+    "jade": "~1.11.0",
+    "jsonrepair": "^3.13.1",
+    "jsonwebtoken": "^9.0.2",
+    "log4js": "^6.9.1",
+    "lru-cache": "^11.2.4",
+    "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "yaml": "^2.8.1"
+  }
+}
