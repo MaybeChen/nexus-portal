@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-import { API_PREFIX } from './constant';
-
 const DEFAULT_TIMEOUT = 15000;
 
 class Request {
@@ -17,22 +15,8 @@ class Request {
     );
   }
 
-  normalizeUrl(url = '') {
-    if (/^https?:\/\//i.test(url)) {
-      return url;
-    }
-
-    const normalizedPath = url.startsWith('/') ? url : `/${url}`;
-    return `${API_PREFIX}${normalizedPath}`;
-  }
-
   request(options = {}) {
-    const { url, ...restOptions } = options;
-
-    return this.instance.request({
-      ...restOptions,
-      url: this.normalizeUrl(url)
-    });
+    return this.instance.request(options);
   }
 
   get(url, params = {}, config = {}) {
@@ -49,6 +33,25 @@ class Request {
 
   delete(url, params = {}, config = {}) {
     return this.request({ ...config, method: 'delete', url, params });
+  }
+
+  upload(url, file, data = {}, config = {}) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value);
+      }
+    });
+
+    return this.post(url, formData, {
+      ...config,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...config.headers
+      }
+    });
   }
 }
 
