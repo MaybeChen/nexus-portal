@@ -140,6 +140,7 @@ const deletingPackageId = ref('');
 const deletingSkillId = ref('');
 const publishingSkill = ref(false);
 const editingSkillId = ref('');
+const pendingDeletedPackageFiles = ref([]);
 const createSkillForm = reactive(initialCreateSkillForm());
 const downloadVisible = ref(false);
 const activeSkill = ref(null);
@@ -166,6 +167,8 @@ const downloadFiles = computed(() => activeSkill.value?.files || []);
 
 const normalizeSkillList = (data) => (Array.isArray(data) ? data : []);
 const getSkillId = (skill = {}) => skill.id || skill._id || '';
+const getFileId = (file = {}) => file.id || file.fileId || '';
+const getFileName = (file = {}) => file.originalName || file.fileName || file.name || '';
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
@@ -219,6 +222,7 @@ const loadSkills = () => {
 
 const resetCreateSkillForm = () => {
   editingSkillId.value = '';
+  pendingDeletedPackageFiles.value = [];
   Object.assign(createSkillForm, initialCreateSkillForm());
   if (packageInputRef.value) {
     packageInputRef.value.value = '';
@@ -227,6 +231,7 @@ const resetCreateSkillForm = () => {
 
 const openCreateSkillDialog = () => {
   editingSkillId.value = '';
+  pendingDeletedPackageFiles.value = [];
   Object.assign(createSkillForm, initialCreateSkillForm());
   createSkillVisible.value = true;
 };
@@ -240,6 +245,7 @@ const openUpdateSkillDialog = (skill) => {
   }
 
   editingSkillId.value = skillId;
+  pendingDeletedPackageFiles.value = [];
   Object.assign(createSkillForm, {
     id: skillId,
     title: skill.title || '',
@@ -291,13 +297,35 @@ const handlePackageChange = (event) => {
   });
 };
 
+const removeFileFromForm = (file) => {
+  const fileId = getFileId(file);
+  createSkillForm.files = createSkillForm.files.filter((item) => getFileId(item) !== fileId);
+};
+
 const deletePackageFile = (file) => {
-  deletingPackageId.value = file.id;
+  const fileId = getFileId(file);
+
+  if (!fileId) {
+    ElMessage.error('技能包信息缺少文件 ID，无法删除');
+    return;
+  }
+
+  if (isEditingSkill.value) {
+    if (!pendingDeletedPackageFiles.value.some((item) => getFileId(item) === fileId)) {
+      pendingDeletedPackageFiles.value.push({ ...file });
+    }
+
+    removeFileFromForm(file);
+    ElMessage.success('技能包已从本次更新中移除，确认更新后同步删除');
+    return;
+  }
+
+  deletingPackageId.value = fileId;
   del(
     FILE_DELETE,
     {
-      fileName: file.originalName,
-      fileId: file.id
+      fileName: getFileName(file),
+      fileId
     },
     (_, error) => {
       deletingPackageId.value = '';
@@ -307,13 +335,26 @@ const deletePackageFile = (file) => {
         return;
       }
 
-      createSkillForm.files = createSkillForm.files.filter((item) => item.id !== file.id);
+      removeFileFromForm(file);
       ElMessage.success('技能包已删除');
     }
   );
 };
 
-const submitSkill = () => {
+const deletePendingPackageFiles = () => {
+  const deleteTasks = pendingDeletedPackageFiles.value.map((file) => {
+    const fileId = getFileId(file);
+
+    return del(FILE_DELETE, {
+      fileName: getFileName(file),
+      fileId
+    });
+  });
+
+  return Promise.all(deleteTasks);
+};
+
+const submitSkill = async () => {
   if (!canPublishSkill.value) {
     return;
   }
@@ -324,18 +365,52 @@ const submitSkill = () => {
   const payload = isUpdate ? { id, title, name, description, type, files } : { title, name, description, type, files };
 
   publishingSkill.value = true;
-  post(path, payload, (_, error) => {
-    publishingSkill.value = false;
 
-    if (error) {
-      ElMessage.error(isUpdate ? '技能更新失败' : '技能发布失败');
-      return;
+  try {
+    if (isUpdate && pendingDeletedPackageFiles.value.length > 0) {
+      await deletePendingPackageFiles();
     }
 
+    await post(path, payload);
     ElMessage.success(isUpdate ? '技能更新成功' : '技能发布成功');
+    pendingDeletedPackageFiles.value = [];
     createSkillVisible.value = false;
     loadSkills();
-  });
+  } catch (error) {
+    ElMessage.error(isUpdate ? '技能更新失败' : '技能发布失败');
+  } finally {
+    publishingSkill.value = false;
+  }
+};
+
+const deleteSkill = (skill) => {
+  const skillId = getSkillId(skill);
+
+  if (!skillId) {
+    ElMessage.error('技能信息缺少 ID，无法删除');
+    return;
+  }
+
+  ElMessageBox.confirm(`确认删除技能「${skill.title || skill.name || skillId}」吗？`, '删除技能', {
+    type: 'warning',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  })
+    .then(() => {
+      deletingSkillId.value = skillId;
+      del(SKILL_DELETE, { id: skillId }, (_, error) => {
+        deletingSkillId.value = '';
+
+        if (error) {
+          ElMessage.error('技能删除失败');
+          return;
+        }
+
+        ElMessage.success('技能删除成功');
+        loadSkills();
+      });
+    })
+    .catch(() => {});
 };
 
 const deleteSkill = (skill) => {
