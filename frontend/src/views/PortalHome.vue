@@ -136,30 +136,36 @@
           />
         </el-form-item>
         <el-form-item label="分类" required>
-          <el-select v-model="createSkillForm.category" placeholder="选择技能分类">
+          <el-select v-model="createSkillForm.type" placeholder="选择技能分类">
             <el-option v-for="category in skillPublishCategories" :key="category" :label="category" :value="category" />
           </el-select>
         </el-form-item>
         <el-form-item label="技能包上传" required>
-          <input ref="packageInputRef" class="package-input" type="file" accept=".rar,.zip" @change="handlePackageChange" />
+          <input ref="packageInputRef" class="package-input" type="file" @change="handlePackageChange" />
           <div class="package-upload">
             <el-button
               :loading="uploadingPackage"
-              :type="createSkillForm.packageName ? 'success' : 'primary'"
+              :disabled="Boolean(deletingPackageId)"
+              type="primary"
               plain
               @click="selectPackageFile"
             >
-              {{ createSkillForm.packageName || '选择 .rar / .zip 技能包' }}
+              {{ hasUploadedPackage ? '继续上传技能包' : '选择技能包' }}
             </el-button>
-            <el-button
-              v-if="createSkillForm.packageName"
-              :loading="deletingPackage"
-              type="danger"
-              plain
-              @click="deletePackageFile"
-            >
-              删除
-            </el-button>
+            <div v-if="hasUploadedPackage" class="package-list">
+              <div v-for="file in createSkillForm.files" :key="file.id" class="package-list__item">
+                <span class="package-list__name" :title="file.originalName">{{ file.originalName }}</span>
+                <el-button
+                  :loading="deletingPackageId === file.id"
+                  :disabled="uploadingPackage || Boolean(deletingPackageId)"
+                  type="danger"
+                  link
+                  @click="deletePackageFile(file)"
+                >
+                  删除
+                </el-button>
+              </div>
+            </div>
           </div>
         </el-form-item>
       </el-form>
@@ -197,29 +203,27 @@ const initialCreateSkillForm = () => ({
   title: '',
   name: '',
   description: '',
-  category: '',
-  packageName: '',
-  packageUrl: '',
-  packageId: ''
+  type: '',
+  files: []
 });
 
 const createSkillVisible = ref(false);
 const packageInputRef = ref(null);
 const uploadingPackage = ref(false);
-const deletingPackage = ref(false);
+const deletingPackageId = ref('');
 const publishingSkill = ref(false);
 const createSkillForm = reactive(initialCreateSkillForm());
 
-const hasUploadedPackage = computed(() => Boolean(createSkillForm.packageName));
+const hasUploadedPackage = computed(() => createSkillForm.files.length > 0);
 const canPublishSkill = computed(() => {
   return Boolean(
     createSkillForm.title
       && createSkillForm.name
       && createSkillForm.description
-      && createSkillForm.category
+      && createSkillForm.type
       && hasUploadedPackage.value
       && !uploadingPackage.value
-      && !deletingPackage.value
+      && !deletingPackageId.value
       && !publishingSkill.value
   );
 });
@@ -236,7 +240,7 @@ const openCreateSkillDialog = () => {
 };
 
 const selectPackageFile = () => {
-  if (uploadingPackage.value || deletingPackage.value) {
+  if (uploadingPackage.value || deletingPackageId.value) {
     return;
   }
 
@@ -251,11 +255,6 @@ const handlePackageChange = (event) => {
     return;
   }
 
-  if (!/\.(rar|zip)$/i.test(file.name)) {
-    ElMessage.error('技能包只支持 .rar 或 .zip 压缩包');
-    return;
-  }
-
   uploadingPackage.value = true;
   upload(FILE_UPLOAD, file, {}, (data, error) => {
     uploadingPackage.value = false;
@@ -265,33 +264,38 @@ const handlePackageChange = (event) => {
       return;
     }
 
-    createSkillForm.packageName = data?.fileName || data?.name || file.name;
-    createSkillForm.packageUrl = data?.url || data?.path || '';
-    createSkillForm.packageId = data?.id || data?.fileId || '';
+    const uploadedFile = {
+      id: data?.id || data?.fileId || '',
+      originalName: data?.originalName || data?.fileName || data?.name || file.name
+    };
+
+    if (!uploadedFile.id) {
+      ElMessage.error('技能包上传结果缺少文件 ID');
+      return;
+    }
+
+    createSkillForm.files.push(uploadedFile);
     ElMessage.success('技能包上传成功');
   });
 };
 
-const deletePackageFile = () => {
-  deletingPackage.value = true;
+const deletePackageFile = (file) => {
+  deletingPackageId.value = file.id;
   del(
     FILE_DELETE,
     {
-      fileName: createSkillForm.packageName,
-      fileUrl: createSkillForm.packageUrl,
-      fileId: createSkillForm.packageId
+      fileName: file.originalName,
+      fileId: file.id
     },
     (_, error) => {
-      deletingPackage.value = false;
+      deletingPackageId.value = '';
 
       if (error) {
         ElMessage.error('技能包删除失败');
         return;
       }
 
-      createSkillForm.packageName = '';
-      createSkillForm.packageUrl = '';
-      createSkillForm.packageId = '';
+      createSkillForm.files = createSkillForm.files.filter((item) => item.id !== file.id);
       ElMessage.success('技能包已删除');
     }
   );
@@ -302,8 +306,10 @@ const publishSkill = () => {
     return;
   }
 
+  const { title, name, description, type, files } = createSkillForm;
+
   publishingSkill.value = true;
-  post(CREATESKILL, { ...createSkillForm }, (_, error) => {
+  post(CREATESKILL, { title, name, description, type, files }, (_, error) => {
     publishingSkill.value = false;
 
     if (error) {
