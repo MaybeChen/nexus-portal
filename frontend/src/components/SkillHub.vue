@@ -25,7 +25,7 @@
               type="danger"
               plain
               round
-              @click="deleteSkill(skill)"
+              @click="handleDeleteSkill(skill)"
             >
               删除
             </el-button>
@@ -83,10 +83,10 @@
               {{ hasUploadedPackage ? '继续上传技能包' : '选择技能包' }}
             </el-button>
             <div v-if="hasUploadedPackage" class="package-list">
-              <div v-for="file in createSkillForm.files" :key="file.id" class="package-list__item">
+              <div v-for="file in createSkillForm.files" :key="getFileId(file)" class="package-list__item">
                 <span class="package-list__name" :title="file.originalName">{{ file.originalName }}</span>
                 <el-button
-                  :loading="deletingPackageId === file.id"
+                  :loading="deletingPackageId === getFileId(file)"
                   :disabled="uploadingPackage || Boolean(deletingPackageId)"
                   type="danger"
                   link
@@ -168,7 +168,6 @@ const downloadFiles = computed(() => activeSkill.value?.files || []);
 const normalizeSkillList = (data) => (Array.isArray(data) ? data : []);
 const getSkillId = (skill = {}) => skill.id || skill._id || '';
 const getFileId = (file = {}) => file.id || file.fileId || '';
-const getFileName = (file = {}) => file.originalName || file.fileName || file.name || '';
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
@@ -302,6 +301,16 @@ const removeFileFromForm = (file) => {
   createSkillForm.files = createSkillForm.files.filter((item) => getFileId(item) !== fileId);
 };
 
+const deletePackageFiles = (files = []) => {
+  const fileIds = files.map(getFileId).filter(Boolean);
+
+  if (fileIds.length === 0) {
+    return Promise.resolve();
+  }
+
+  return del(FILE_DELETE, { files: fileIds });
+};
+
 const deletePackageFile = (file) => {
   const fileId = getFileId(file);
 
@@ -321,38 +330,20 @@ const deletePackageFile = (file) => {
   }
 
   deletingPackageId.value = fileId;
-  del(
-    FILE_DELETE,
-    {
-      fileName: getFileName(file),
-      fileId
-    },
-    (_, error) => {
-      deletingPackageId.value = '';
-
-      if (error) {
-        ElMessage.error('技能包删除失败');
-        return;
-      }
-
+  deletePackageFiles([file])
+    .then(() => {
       removeFileFromForm(file);
       ElMessage.success('技能包已删除');
-    }
-  );
-};
-
-const deletePendingPackageFiles = () => {
-  const deleteTasks = pendingDeletedPackageFiles.value.map((file) => {
-    const fileId = getFileId(file);
-
-    return del(FILE_DELETE, {
-      fileName: getFileName(file),
-      fileId
+    })
+    .catch(() => {
+      ElMessage.error('技能包删除失败');
+    })
+    .finally(() => {
+      deletingPackageId.value = '';
     });
-  });
-
-  return Promise.all(deleteTasks);
 };
+
+const deletePendingPackageFiles = () => deletePackageFiles(pendingDeletedPackageFiles.value);
 
 const submitSkill = async () => {
   if (!canPublishSkill.value) {
@@ -383,7 +374,7 @@ const submitSkill = async () => {
   }
 };
 
-const deleteSkill = (skill) => {
+const handleDeleteSkill = async (skill) => {
   const skillId = getSkillId(skill);
 
   if (!skillId) {
@@ -391,56 +382,28 @@ const deleteSkill = (skill) => {
     return;
   }
 
-  ElMessageBox.confirm(`确认删除技能「${skill.title || skill.name || skillId}」吗？`, '删除技能', {
-    type: 'warning',
-    confirmButtonText: '删除',
-    cancelButtonText: '取消'
-  })
-    .then(() => {
-      deletingSkillId.value = skillId;
-      del(SKILL_DELETE, { id: skillId }, (_, error) => {
-        deletingSkillId.value = '';
-
-        if (error) {
-          ElMessage.error('技能删除失败');
-          return;
-        }
-
-        ElMessage.success('技能删除成功');
-        loadSkills();
-      });
-    })
-    .catch(() => {});
-};
-
-const deleteSkill = (skill) => {
-  const skillId = getSkillId(skill);
-
-  if (!skillId) {
-    ElMessage.error('技能信息缺少 ID，无法删除');
+  if (deletingSkillId.value) {
     return;
   }
 
-  ElMessageBox.confirm(`确认删除技能「${skill.title || skill.name || skillId}」吗？`, '删除技能', {
-    type: 'warning',
-    confirmButtonText: '删除',
-    cancelButtonText: '取消'
-  })
-    .then(() => {
-      deletingSkillId.value = skillId;
-      del(SKILL_DELETE, { id: skillId }, (_, error) => {
-        deletingSkillId.value = '';
+  try {
+    await ElMessageBox.confirm(`确认删除技能「${skill.title || skill.name || skillId}」吗？`, '删除技能', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    });
 
-        if (error) {
-          ElMessage.error('技能删除失败');
-          return;
-        }
-
-        ElMessage.success('技能删除成功');
-        loadSkills();
-      });
-    })
-    .catch(() => {});
+    deletingSkillId.value = skillId;
+    await del(SKILL_DELETE, { id: skillId });
+    ElMessage.success('技能删除成功');
+    loadSkills();
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error('技能删除失败');
+    }
+  } finally {
+    deletingSkillId.value = '';
+  }
 };
 
 const openDownloadDialog = (skill) => {
