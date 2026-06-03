@@ -413,6 +413,36 @@ const deleteSkill = (skill) => {
     .catch(() => {});
 };
 
+const deleteSkill = (skill) => {
+  const skillId = getSkillId(skill);
+
+  if (!skillId) {
+    ElMessage.error('技能信息缺少 ID，无法删除');
+    return;
+  }
+
+  ElMessageBox.confirm(`确认删除技能「${skill.title || skill.name || skillId}」吗？`, '删除技能', {
+    type: 'warning',
+    confirmButtonText: '删除',
+    cancelButtonText: '取消'
+  })
+    .then(() => {
+      deletingSkillId.value = skillId;
+      del(SKILL_DELETE, { id: skillId }, (_, error) => {
+        deletingSkillId.value = '';
+
+        if (error) {
+          ElMessage.error('技能删除失败');
+          return;
+        }
+
+        ElMessage.success('技能删除成功');
+        loadSkills();
+      });
+    })
+    .catch(() => {});
+};
+
 const openDownloadDialog = (skill) => {
   activeSkill.value = skill;
   downloadVisible.value = true;
