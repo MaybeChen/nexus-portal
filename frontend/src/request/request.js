@@ -33,14 +33,24 @@ const instance = axios.create({
   ]
 });
 
-const errorProcess = {
-  [STATUS_CODE.UNAUTHORIZED]: (response = {}) => {
-    if (isUndefined(response.data?.data?.loginUrl)) {
-      return;
-    }
+const getLoginUrl = (data = {}) => data?.data?.loginUrl ?? data?.loginUrl;
 
-    window.location = `${response.data?.data?.loginUrl}${encodeURIComponent(window.location.href)}`;
+const isUnauthorizedPayload = (data = {}) => {
+  return [data?.code, data?.status, data?.statusCode].some((code) => Number(code) === STATUS_CODE.UNAUTHORIZED);
+};
+
+const redirectToLogin = (response = {}) => {
+  const loginUrl = getLoginUrl(response.data);
+
+  if (isUndefined(loginUrl) || loginUrl === '') {
+    return;
   }
+
+  window.location = `${loginUrl}${encodeURIComponent(window.location.href)}`;
+};
+
+const errorProcess = {
+  [STATUS_CODE.UNAUTHORIZED]: redirectToLogin
 };
 
 const preProcess = (headers) => {
@@ -60,6 +70,11 @@ instance.interceptors.response.use(
     if (response.headers[X_WA_TOKEN]) {
       const store = useParamsStore();
       store.setToken(response.headers[X_WA_TOKEN]);
+    }
+
+    if (isUnauthorizedPayload(response.data)) {
+      redirectToLogin(response);
+      return Promise.reject(response.data);
     }
 
     if (response.data?.success === false) {
