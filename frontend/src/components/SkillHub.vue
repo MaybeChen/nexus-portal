@@ -115,7 +115,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
-import { del, download, get, post, upload } from '@/request/webservice';
+import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import { usePortalStore } from '@/stores/portal';
 
@@ -308,7 +308,7 @@ const deletePackageFiles = (files = []) => {
     return Promise.resolve();
   }
 
-  return del(FILE_DELETE, { files: fileIds });
+  return post(FILE_DELETE, { files: fileIds });
 };
 
 const deletePackageFile = (file) => {
@@ -394,7 +394,7 @@ const handleDeleteSkill = async (skill) => {
     });
 
     deletingSkillId.value = skillId;
-    await del(SKILL_DELETE, { id: skillId });
+    await post(SKILL_DELETE, { id: skillId });
     ElMessage.success('技能删除成功');
     loadSkills();
   } catch (error) {
