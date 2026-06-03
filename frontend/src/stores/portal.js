@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 export const usePortalStore = defineStore('portal', {
   state: () => ({
     activeSection: 'skillhub',
-    activeToolCategory: 'writing',
+    activeToolCategory: '通用与办公',
     user: {
       name: 'Alex Chen',
       role: '管理员',
@@ -16,9 +16,12 @@ export const usePortalStore = defineStore('portal', {
     ],
     skills: [],
     toolCategories: [
-      { key: 'writing', label: '内容创作' },
-      { key: 'analysis', label: '数据分析' },
-      { key: 'automation', label: '自动化' }
+      { key: '通用与办公', label: '通用与办公' },
+      { key: '邮件与沟通', label: '邮件与沟通' },
+      { key: '会议与日程', label: '会议与日程' },
+      { key: '搜索与信息查询', label: '搜索与信息查询' },
+      { key: '数据分析', label: '数据分析' },
+      { key: '其他', label: '其他' }
     ],
     tools: [
       { id: 1, category: 'writing', logo: '✍️', name: '智能写作台', description: '面向公告、邮件和方案的多模板内容生成工具。' },
@@ -67,7 +70,7 @@ export const usePortalStore = defineStore('portal', {
   }),
   getters: {
     navigationItems: (state) => state.sections,
-    filteredTools: (state) => state.tools.filter((item) => item.category === state.activeToolCategory)
+    filteredTools: (state) => state.tools.filter((item) => (item.type || item.category) === state.activeToolCategory)
   },
   actions: {
     setActiveSection(key) {
@@ -78,6 +81,9 @@ export const usePortalStore = defineStore('portal', {
     },
     setSkills(skills) {
       this.skills = skills;
+    },
+    setTools(tools) {
+      this.tools = tools;
     }
   }
 });
