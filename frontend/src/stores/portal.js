@@ -3,7 +3,6 @@ import { defineStore } from 'pinia';
 export const usePortalStore = defineStore('portal', {
   state: () => ({
     activeSection: 'skillhub',
-    activeSkillCategory: 'productivity',
     activeToolCategory: 'writing',
     user: {
       name: 'Alex Chen',
@@ -15,25 +14,7 @@ export const usePortalStore = defineStore('portal', {
       { key: 'ai-tools', title: 'AI工具', badge: 'AI' },
       { key: 'model-store', title: '模型商店', badge: 'MS' }
     ],
-    skillCategories: [
-      { key: 'productivity', label: '效率协同' },
-      { key: 'development', label: '研发提效' },
-      { key: 'marketing', label: '营销增长' }
-    ],
-    skills: [
-      { id: 1, category: 'productivity', name: '会议纪要助手', description: '自动整理会议录音与要点，输出行动项、责任人与截止时间。' },
-      { id: 2, category: 'productivity', name: '周报生成器', description: '聚合项目进展、风险与数据指标，快速生成结构化团队周报。' },
-      { id: 3, category: 'productivity', name: '知识库问答', description: '连接企业知识库，支持自然语言检索制度、流程与项目文档。' },
-      { id: 4, category: 'productivity', name: '流程审阅', description: '识别流程表单中的缺失字段与异常审批节点，降低人工审核成本。' },
-      { id: 5, category: 'development', name: '代码评审清单', description: '基于团队规范生成代码评审建议，覆盖安全、性能和可维护性。' },
-      { id: 6, category: 'development', name: '接口文档生成', description: '根据接口定义自动生成 API 文档、调用示例与错误码说明。' },
-      { id: 7, category: 'development', name: '测试用例补全', description: '分析业务分支与边界条件，推荐单测、集成测试与回归用例。' },
-      { id: 8, category: 'development', name: '故障复盘助手', description: '整理告警、日志和时间线，形成故障原因、影响面与改进项。' },
-      { id: 9, category: 'marketing', name: '活动文案创作', description: '按照品牌语气生成多渠道活动文案，支持标题、短信和海报内容。' },
-      { id: 10, category: 'marketing', name: '竞品洞察摘要', description: '汇总竞品动态、卖点与价格变化，为运营决策提供参考。' },
-      { id: 11, category: 'marketing', name: '用户反馈聚类', description: '对评论和工单进行主题聚类，提炼核心诉求与优先级建议。' },
-      { id: 12, category: 'marketing', name: '投放复盘模板', description: '生成投放数据分析框架，标注异常指标并给出优化方向。' }
-    ],
+    skills: [],
     toolCategories: [
       { key: 'writing', label: '内容创作' },
       { key: 'analysis', label: '数据分析' },
@@ -86,18 +67,17 @@ export const usePortalStore = defineStore('portal', {
   }),
   getters: {
     navigationItems: (state) => state.sections,
-    filteredSkills: (state) => state.skills.filter((item) => item.category === state.activeSkillCategory),
     filteredTools: (state) => state.tools.filter((item) => item.category === state.activeToolCategory)
   },
   actions: {
     setActiveSection(key) {
       this.activeSection = key;
     },
-    setActiveSkillCategory(key) {
-      this.activeSkillCategory = key;
-    },
     setActiveToolCategory(key) {
       this.activeToolCategory = key;
+    },
+    setSkills(skills) {
+      this.skills = skills;
     }
   }
 });

@@ -44,11 +44,34 @@ export const nexusUpload = (path, file, data = {}, callback) => {
   return invoke(request.upload(withNexusPrefix(path), file, data), callback);
 };
 
+const saveBlob = (blob, fileName = 'download') => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+export const nexusDownload = (path, params = {}, callback) => {
+  const promise = request
+    .get(withNexusPrefix(path), params, { responseType: 'blob' })
+    .then((data) => {
+      saveBlob(data, params.name);
+      return data;
+    });
+
+  return invoke(promise, callback);
+};
+
 export const get = nexusGet;
 export const post = nexusPost;
 export const put = nexusPut;
 export const del = nexusDel;
 export const upload = nexusUpload;
+export const download = nexusDownload;
 
 export default {
   nexusGet,
@@ -56,9 +79,11 @@ export default {
   nexusPut,
   nexusDel,
   nexusUpload,
+  nexusDownload,
   get,
   post,
   put,
   del,
-  upload
+  upload,
+  download
 };
