@@ -11,9 +11,10 @@ export const STATUS_CODE = {
 export const X_WA_TOKEN = 'x-wa-token';
 
 export const CREATESKILL = '/skills/create';
-export const SKILL_LIST = '/skill/list';
+export const SKILL_LIST = '/skills/list';
 export const AI_TOOL_LIST = '/tool/list';
 export const MODEL_STORE_LIST = '/model/list';
 export const FILE_UPLOAD = '/files/upload';
 export const FILE_DELETE = '/files/delete';
+export const FILE_DOWNLOAD = '/files/download';
 export const USER_INFO = '/me';
