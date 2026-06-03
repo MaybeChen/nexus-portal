@@ -10,10 +10,10 @@
       </div>
 
       <div class="portal-user">
-        <span class="portal-user__avatar">{{ portal.user.avatar }}</span>
+        <span class="portal-user__avatar">{{ displayUser.avatar }}</span>
         <div>
-          <strong>{{ portal.user.name }}</strong>
-          <small>{{ portal.user.role }}</small>
+          <strong>{{ displayUser.name }}</strong>
+          <small>{{ displayUser.role }}</small>
         </div>
       </div>
     </el-header>
@@ -180,9 +180,17 @@ import { ElMessage } from 'element-plus';
 
 import { CREATESKILL, FILE_DELETE, FILE_UPLOAD } from '@/request/constant';
 import { del, post, upload } from '@/request/webservice';
+import { useUserStore } from '@/store';
 import { usePortalStore } from '@/stores/portal';
 
 const portal = usePortalStore();
+const userStore = useUserStore();
+
+const displayUser = computed(() => ({
+  avatar: userStore.avatar || portal.user.avatar,
+  name: userStore.name || portal.user.name,
+  role: userStore.role || portal.user.role
+}));
 
 const skillPublishCategories = ['通用与办公', '邮件与沟通', '会议与日程', '搜索与信息查询', '数据分析', '其他'];
 const initialCreateSkillForm = () => ({
