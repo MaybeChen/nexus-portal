@@ -141,7 +141,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="技能包上传" required>
-          <input ref="packageInputRef" class="package-input" type="file" accept=".rar,.zip" @change="handlePackageChange" />
+          <input ref="packageInputRef" class="package-input" type="file" @change="handlePackageChange" />
           <div class="package-upload">
             <el-button
               :loading="uploadingPackage"
@@ -150,7 +150,7 @@
               plain
               @click="selectPackageFile"
             >
-              {{ hasUploadedPackage ? '继续上传 .rar / .zip 技能包' : '选择 .rar / .zip 技能包' }}
+              {{ hasUploadedPackage ? '继续上传技能包' : '选择技能包' }}
             </el-button>
             <div v-if="hasUploadedPackage" class="package-list">
               <div v-for="file in createSkillForm.files" :key="file.id" class="package-list__item">
@@ -252,11 +252,6 @@ const handlePackageChange = (event) => {
   event.target.value = '';
 
   if (!file) {
-    return;
-  }
-
-  if (!/\.(rar|zip)$/i.test(file.name)) {
-    ElMessage.error('技能包只支持 .rar 或 .zip 压缩包');
     return;
   }
 
