@@ -42,7 +42,7 @@ function isExternalOrSpecialUrl(rawUrl) {
   return /^(data:|blob:|https?:|mailto:|tel:|#)/i.test(String(rawUrl || '').trim());
 }
 
-function getAsset(fileMap, assetPath) {
+function getWorkspaceAsset(fileMap, assetPath) {
   const record = fileMap.get(assetPath);
   if (!record) return null;
   return typeof record === 'string' ? { url: record } : record;
@@ -55,7 +55,7 @@ function findKnownAssetPath(rawUrl, fileMap) {
 
   const relativePath = normalizePath(cleanUrl.slice(mapping.remotePrefix.length));
   const candidates = mapping.localPrefixes.map((prefix) => normalizePath(`${prefix}${relativePath}`));
-  return candidates.find((candidate) => getAsset(fileMap, candidate)) || candidates[0] || null;
+  return candidates.find((candidate) => getWorkspaceAsset(fileMap, candidate)) || candidates[0] || null;
 }
 
 function resolveRelativePath(basePath, rawUrl, fileMap) {
@@ -93,7 +93,7 @@ function rewriteUrl(rawUrl, basePath, fileMap, warnings, label) {
   const assetPath = resolveRelativePath(basePath, rawUrl, fileMap);
   if (!assetPath) return rawUrl;
 
-  const asset = getAsset(fileMap, assetPath);
+  const asset = getWorkspaceAsset(fileMap, assetPath);
   if (!asset?.url) {
     warnings.add(`未找到${label}：${rawUrl}`);
     return rawUrl;
@@ -132,7 +132,7 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
     const cssPath = resolveRelativePath(htmlPath, rawUrl, fileMap);
     if (!cssPath) continue;
 
-    const asset = getAsset(fileMap, cssPath);
+    const asset = getWorkspaceAsset(fileMap, cssPath);
     if (!asset?.file) {
       warnings.add(`未找到样式表：${rawUrl}`);
       continue;
