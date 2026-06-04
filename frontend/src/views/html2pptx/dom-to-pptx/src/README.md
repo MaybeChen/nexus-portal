@@ -1,8 +1,18 @@
 # dom-to-pptx local source
 
-This directory vendors the route-local `dom-to-pptx` source entry used by the
-HTML2PPTX page. It intentionally exposes the same public entrypoint requested by
-the upstream project (`index.js` → `exportToPptx`) so the feature no longer loads
-a remote bundled script at runtime.
+This directory is the route-local vendor area for the `dom-to-pptx` `src` tree
+used by the HTML2PPTX page. It mirrors the upstream source layout so this route
+can import `src/index.js` and call `exportToPptx` directly without loading a
+remote bundle at runtime.
 
 Upstream source reference: https://github.com/atharva9167j/dom-to-pptx/tree/master/src
+
+Copied source paths represented here:
+
+- `index.js`
+- `font-embedder.js`
+- `font-utils.js`
+- `image-processor.js`
+- `pptx-normalizer.js`
+- `utils.js`
+- `__tests__/`
