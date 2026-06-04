@@ -12,11 +12,15 @@
       <article v-for="model in portal.models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
         <div class="model-card__topline">
           <h3>{{ model.title || model.name }}</h3>
-          <el-tag type="info">可接入</el-tag>
         </div>
         <p>{{ model.description }}</p>
         <div class="model-card__models">
           <span v-for="item in getModelItems(model)" :key="item">{{ item }}</span>
+        </div>
+        <div class="model-url">
+          <span>调用 URL</span>
+          <code>{{ getModelUrl(model) || '暂无地址' }}</code>
+          <el-button size="small" type="primary" plain @click="copyModelUrl(getModelUrl(model))">复制</el-button>
         </div>
         <div class="app-key">
           <code>{{ getModelAppKey(model) }}</code>
@@ -264,17 +268,17 @@ const handleDeleteModel = async (model) => {
   }
 };
 
-const copyAppKey = async (appKey) => {
-  if (!appKey) {
-    ElMessage.error('AppKey 为空，无法复制');
+const copyText = async (text, emptyMessage, successMessage) => {
+  if (!text) {
+    ElMessage.error(emptyMessage);
     return;
   }
 
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(appKey);
+    await navigator.clipboard.writeText(text);
   } else {
     const textArea = document.createElement('textarea');
-    textArea.value = appKey;
+    textArea.value = text;
     textArea.style.position = 'fixed';
     textArea.style.opacity = '0';
     document.body.appendChild(textArea);
@@ -283,8 +287,12 @@ const copyAppKey = async (appKey) => {
     document.body.removeChild(textArea);
   }
 
-  ElMessage.success('AppKey 已复制');
+  ElMessage.success(successMessage);
 };
+
+const copyModelUrl = (url) => copyText(url, '调用 URL 为空，无法复制', '调用 URL 已复制');
+
+const copyAppKey = (appKey) => copyText(appKey, 'AppKey 为空，无法复制', 'AppKey 已复制');
 
 onMounted(loadModels);
 </script>

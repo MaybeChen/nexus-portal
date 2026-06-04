@@ -331,7 +331,8 @@ button {
   margin-left: 0;
 }
 
-.app-key {
+.app-key,
+.model-url {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -341,9 +342,24 @@ button {
   background: #f1f5f9;
 }
 
-.app-key code {
+.model-url {
+  margin-bottom: 10px;
+}
+
+.model-url span {
+  flex: 0 0 auto;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-key code,
+.model-url code {
+  overflow: hidden;
   color: #334155;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .create-skill-form .el-select,
