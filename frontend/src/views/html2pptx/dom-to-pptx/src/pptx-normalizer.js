@@ -1,88 +1,114 @@
-import { concatBytes, encodeText, uint16, uint32 } from './utils.js';
+// src/pptx-normalizer.js
+//
+// Defensive OOXML normalizer that runs over the PPTX produced by PptxGenJS
+// before we hand the .pptx blob to the user. Microsoft PowerPoint refuses to
+// open files when [Content_Types].xml advertises parts that are not actually
+// present in the package — see 错误诊断.md for the original incident report.
+//
+// This module operates on an already-loaded JSZip instance and mutates it in
+// place. The caller is responsible for re-serializing the zip with DEFLATE
+// compression afterwards.
+const pPrOrder = [
+  'lnSpc',
+  'spcBef',
+  'spcAft',
+  'buClrTx',
+  'buClr',
+  'buSzTx',
+  'buSzPct',
+  'buSzPts',
+  'buFontTx',
+  'buFont',
+  'buNone',
+  'buAutoNum',
+  'buChar',
+  'buBlip',
+  'tabLst',
+  'defRPr',
+  'extLst',
+];
 
-const crcTable = Array.from({ length: 256 }, (_, index) => {
-  let value = index;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+/**
+ * Strips dangling <Override> entries from [Content_Types].xml.
+ *
+ * An Override is "dangling" when its PartName attribute references a file path
+ * that does not exist inside the zip. Default entries are left untouched
+ * because they apply to every file with a matching extension, and removing
+ * them would break legitimate parts (e.g. the fntdata default added by the
+ * font embedder).
+ *
+ * The function is idempotent: running it twice on the same zip yields the
+ * same result as running it once.
+ *
+ * @param {import('jszip')} zip - JSZip instance with the loaded PPTX package.
+ * @returns {Promise<void>}
+ */
+export async function normalizePptxZip(zip) {
+  if (!zip) return;
+  const contentTypesFile = zip.file('[Content_Types].xml');
+  if (!contentTypesFile) return;
+  let xmlStr;
+  try {
+    xmlStr = await contentTypesFile.async('string');
+  } catch (e) {
+    console.warn('[pptx-normalizer] Failed to read [Content_Types].xml:', e);
+    return;
   }
-  return value >>> 0;
-});
+  let doc;
+  try {
+    doc = new DOMParser().parseFromString(xmlStr, 'text/xml');
+  } catch (e) {
+    console.warn('[pptx-normalizer] Failed to parse [Content_Types].xml:', e);
+    return;
+  }
+  const parserError = doc.getElementsByTagName('parsererror')[0];
+  if (parserError) {
+    console.warn('[pptx-normalizer] [Content_Types].xml has parser errors, skipping cleanup.');
+    return;
+  }
 
-function crc32(data) {
-  let crc = 0xffffffff;
-  for (const byte of data) crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
-  return (crc ^ 0xffffffff) >>> 0;
+  stripDanglingOverrides(zip, doc);
+  await normalizePresentationParts(zip);
+
+  const serialized = new XMLSerializer().serializeToString(doc);
+  zip.file('[Content_Types].xml', serialized);
 }
 
-function getDosTimestamp() {
-  const now = new Date();
-  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
-  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
-  return { time, date };
+function stripDanglingOverrides(zip, doc) {
+  const overrides = Array.from(doc.getElementsByTagName('Override'));
+  for (const override of overrides) {
+    const partName = override.getAttribute('PartName');
+    if (!partName) continue;
+    const zipPath = partName.replace(/^\//, '');
+    if (!zip.file(zipPath)) override.parentNode?.removeChild(override);
+  }
 }
 
-export function createZip(files) {
-  const { time, date } = getDosTimestamp();
-  const localParts = [];
-  const centralParts = [];
-  let offset = 0;
+async function normalizePresentationParts(zip) {
+  const paths = Object.keys(zip.files).filter((path) => /^ppt\/slides\/slide\d+\.xml$/.test(path));
+  await Promise.all(paths.map(async (path) => {
+    const file = zip.file(path);
+    if (!file) return;
+    const xml = await file.async('string');
+    zip.file(path, normalizeParagraphProperties(xml));
+  }));
+}
 
-  files.forEach(({ path, content }) => {
-    const name = encodeText(path);
-    const data = typeof content === 'string' ? encodeText(content) : content;
-    const crc = crc32(data);
-    const localHeader = concatBytes([
-      uint32(0x04034b50),
-      uint16(20),
-      uint16(0),
-      uint16(0),
-      uint16(time),
-      uint16(date),
-      uint32(crc),
-      uint32(data.length),
-      uint32(data.length),
-      uint16(name.length),
-      uint16(0),
-      name
-    ]);
-
-    localParts.push(localHeader, data);
-    centralParts.push(
-      concatBytes([
-        uint32(0x02014b50),
-        uint16(20),
-        uint16(20),
-        uint16(0),
-        uint16(0),
-        uint16(time),
-        uint16(date),
-        uint32(crc),
-        uint32(data.length),
-        uint32(data.length),
-        uint16(name.length),
-        uint16(0),
-        uint16(0),
-        uint16(0),
-        uint16(0),
-        uint32(0),
-        uint32(offset),
-        name
-      ])
-    );
-    offset += localHeader.length + data.length;
+function normalizeParagraphProperties(xml) {
+  return xml.replace(/<a:pPr([^>]*)>([\s\S]*?)<\/a:pPr>/g, (match, attrs, body) => {
+    const children = [];
+    body.replace(/<a:([A-Za-z0-9]+)\b[\s\S]*?<\/a:\1>|<a:([A-Za-z0-9]+)\b[^/]*\/>/g, (child) => {
+      children.push(child);
+      return child;
+    });
+    if (!children.length) return match;
+    children.sort((a, b) => orderOf(a) - orderOf(b));
+    return `<a:pPr${attrs}>${children.join('')}</a:pPr>`;
   });
+}
 
-  const centralDirectory = concatBytes(centralParts);
-  const end = concatBytes([
-    uint32(0x06054b50),
-    uint16(0),
-    uint16(0),
-    uint16(files.length),
-    uint16(files.length),
-    uint32(centralDirectory.length),
-    uint32(offset),
-    uint16(0)
-  ]);
-
-  return concatBytes([...localParts, centralDirectory, end]);
+function orderOf(childXml) {
+  const name = childXml.match(/^<a:([A-Za-z0-9]+)/)?.[1];
+  const index = pPrOrder.indexOf(name);
+  return index === -1 ? pPrOrder.length : index;
 }
