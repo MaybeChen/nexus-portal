@@ -396,6 +396,16 @@ async function elementToCanvasImage(node, widthPx, heightPx) {
   });
 }
 
+
+function getCornerRadii(style) {
+  return {
+    tl: parseFloat(style.borderTopLeftRadius) || parseFloat(style.borderRadius) || 0,
+    tr: parseFloat(style.borderTopRightRadius) || parseFloat(style.borderRadius) || 0,
+    br: parseFloat(style.borderBottomRightRadius) || parseFloat(style.borderRadius) || 0,
+    bl: parseFloat(style.borderBottomLeftRadius) || parseFloat(style.borderRadius) || 0,
+  };
+}
+
 function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalOptions = {}) {
   const nodeType = node.nodeType;
   const inheritedOpacity = globalOptions._inheritedOpacity || 1;
@@ -409,7 +419,7 @@ function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalO
     return {
       items: [{
         type: 'text',
-        textParts: collectTextParts(parent, globalOptions),
+        textParts: collectTextParts(parent, style, layout.scale, null, true, inheritedOpacity),
         options: {
           x: (rect.x - layout.rootX) * PX_TO_INCH * layout.scale + layout.offX,
           y: (rect.y - layout.rootY) * PX_TO_INCH * layout.scale + layout.offY,
@@ -418,7 +428,7 @@ function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalO
           margin: 0,
           breakLine: false,
           fit: 'shrink',
-          ...getTextStyle(style),
+          ...getTextStyle(style, layout.scale, true, inheritedOpacity),
         },
         zIndex,
         domOrder: order,
@@ -435,7 +445,7 @@ function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalO
   const y = (rect.y - layout.rootY) * PX_TO_INCH * layout.scale + layout.offY;
   const w = rect.width * PX_TO_INCH * layout.scale;
   const h = rect.height * PX_TO_INCH * layout.scale;
-  const commonOptions = { x, y, w, h, rotate: getRotation(nodeStyle), transparency: Math.round((1 - inheritedOpacity) * 100) };
+  const commonOptions = { x, y, w, h, rotate: getRotation(nodeStyle.transform), transparency: Math.round((1 - inheritedOpacity) * 100) };
 
   if (node.tagName === 'TABLE') {
     return {
@@ -449,7 +459,7 @@ function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalO
     return {
       items: [item],
       job: async () => {
-        item.options.data = await getProcessedImage(node.currentSrc || node.src, rect.width, rect.height, getBorderInfo(nodeStyle).radius, nodeStyle.objectFit, nodeStyle.objectPosition);
+        item.options.data = await getProcessedImage(node.currentSrc || node.src, rect.width, rect.height, getCornerRadii(nodeStyle), nodeStyle.objectFit, nodeStyle.objectPosition);
         if (!item.options.data) item.skip = true;
       },
       stopRecursion: true,
@@ -470,33 +480,34 @@ function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalO
 
   if (isTextContainer(node)) {
     return {
-      items: [{ type: 'text', textParts: collectTextParts(node, globalOptions), options: { ...commonOptions, ...getTextStyle(nodeStyle), margin: 0, breakLine: false, fit: 'shrink' }, zIndex, domOrder: order }],
+      items: [{ type: 'text', textParts: collectTextParts(node, nodeStyle, layout.scale, null, true, inheritedOpacity), options: { ...commonOptions, ...getTextStyle(nodeStyle, layout.scale, true, inheritedOpacity), margin: 0, breakLine: false, fit: 'shrink' }, zIndex, domOrder: order }],
       stopRecursion: true,
     };
   }
 
+  const radius = getCornerRadii(nodeStyle);
+  const border = getBorderInfo(nodeStyle, layout.scale);
   const bg = nodeStyle.backgroundImage && nodeStyle.backgroundImage !== 'none'
-    ? generateGradientSVG(nodeStyle.backgroundImage, rect.width, rect.height)
+    ? generateGradientSVG(rect.width, rect.height, nodeStyle.backgroundImage, radius, border?.type === 'uniform' ? border.options : null)
     : null;
-  const fillColor = parseColor(nodeStyle.backgroundColor);
-  const border = getBorderInfo(nodeStyle);
+  const fillColor = parseColor(nodeStyle.backgroundColor, nodeStyle);
   const items = [];
-  if (fillColor || bg || border) {
+  if ((fillColor.hex && fillColor.opacity > 0) || bg || border.type !== 'none') {
     items.push({
       type: bg ? 'image' : 'shape',
       shapeType: getCustomShapeType(nodeStyle.getPropertyValue('--pptx-shape'), pptx),
-      options: bg ? { ...commonOptions, data: bg } : { ...commonOptions, fill: fillColor ? { color: fillColor.hex, transparency: fillColor.transparency } : { color: 'FFFFFF', transparency: 100 }, line: border?.line || { transparency: 100 }, radius: border?.radius?.tl },
+      options: bg ? { ...commonOptions, data: bg } : { ...commonOptions, fill: fillColor.hex ? { color: fillColor.hex, transparency: Math.round((1 - fillColor.opacity) * 100) } : { color: 'FFFFFF', transparency: 100 }, line: border.type === 'uniform' ? border.options : { transparency: 100 }, radius: radius.tl },
       zIndex,
       domOrder: order,
     });
   }
-  getVisibleShadow(nodeStyle);
-  getWritingModeVert(nodeStyle);
-  getPadding(nodeStyle);
-  getSoftEdges(nodeStyle);
-  generateBlurredSVG(node, rect.width, rect.height);
-  generateCompositeBorderSVG(nodeStyle, rect.width, rect.height);
-  isClippedByParent(node, layout.root);
-  generateCustomShapeSVG(nodeStyle, rect.width, rect.height);
+  getVisibleShadow(nodeStyle.boxShadow || nodeStyle.textShadow, layout.scale);
+  getWritingModeVert(nodeStyle.writingMode, nodeStyle.textOrientation);
+  getPadding(nodeStyle, layout.scale);
+  getSoftEdges(nodeStyle.filter, layout.scale);
+  if (fillColor.hex) generateBlurredSVG(rect.width, rect.height, fillColor.hex, radius.tl, 0);
+  if (border.type === 'composite') generateCompositeBorderSVG(rect.width, rect.height, radius.tl, border.sides);
+  isClippedByParent(node);
+  if (fillColor.hex) generateCustomShapeSVG(rect.width, rect.height, fillColor.hex, fillColor.opacity, radius);
   return items.length ? { items } : null;
 }
