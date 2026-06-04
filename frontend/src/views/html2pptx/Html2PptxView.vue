@@ -115,6 +115,7 @@ const fontDiagnostics = ref([]);
 const htmlFiles = ref([]);
 const fileMap = ref(new Map());
 const objectUrls = ref([]);
+const previewObjectUrls = ref([]);
 const activeIndex = ref(0);
 const previewHtml = ref('');
 const previewWarnings = ref([]);
@@ -139,7 +140,13 @@ function pickDirectory() {
   directoryInputRef.value?.click();
 }
 
+function clearPreviewUrls() {
+  revokeWorkspaceUrls(previewObjectUrls.value);
+  previewObjectUrls.value = [];
+}
+
 function clearWorkspaceUrls() {
+  clearPreviewUrls();
   revokeWorkspaceUrls(objectUrls.value);
   objectUrls.value = [];
 }
@@ -166,6 +173,7 @@ function setActiveIndex(index) {
 }
 
 async function refreshPreview() {
+  clearPreviewUrls();
   previewHtml.value = '';
   previewWarnings.value = [];
   fontDiagnostics.value = [];
@@ -175,6 +183,7 @@ async function refreshPreview() {
     const result = await readHtmlDocument(activeItem.value, fileMap.value);
     previewHtml.value = result.html;
     previewWarnings.value = result.warnings;
+    previewObjectUrls.value = result.objectUrls || [];
   } catch (error) {
     statusType.value = 'error';
     statusText.value = `读取预览失败：${error?.message || error}`;
