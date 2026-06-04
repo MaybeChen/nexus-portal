@@ -51,16 +51,7 @@
           <el-input v-model.trim="modelForm.url" placeholder="输入模型地址" />
         </el-form-item>
         <el-form-item label="模型" required>
-          <el-select
-            v-model="modelForm.models"
-            multiple
-            filterable
-            allow-create
-            default-first-option
-            placeholder="输入或选择模型，回车添加"
-          >
-            <el-option v-for="model in modelOptions" :key="model" :label="model" :value="model" />
-          </el-select>
+          <el-input v-model.trim="modelForm.models" placeholder="输入模型名称，多个模型名称以,分割" />
         </el-form-item>
         <el-form-item label="秘钥" required>
           <el-input v-model.trim="modelForm.app_key" placeholder="输入模型秘钥" />
@@ -89,13 +80,12 @@ import { usePortalStore } from '@/stores/portal';
 const portal = usePortalStore();
 const userStore = useUserStore();
 
-const modelOptions = ['GPT-4.1', 'GPT-4o', 'GPT-5.3-Codex', 'Vision-Pro', 'Omni-VL', 'DocScan-Max', 'DataGPT'];
 const initialModelForm = () => ({
   id: '',
   title: '',
   description: '',
   url: '',
-  models: [],
+  models: '',
   app_key: ''
 });
 
@@ -114,7 +104,7 @@ const canSubmitModel = computed(() => {
     modelForm.title
       && modelForm.description
       && modelForm.url
-      && modelForm.models.length > 0
+      && modelForm.models
       && modelForm.app_key
       && (!isEditingModel.value || modelForm.id)
       && !submittingModel.value
@@ -212,7 +202,7 @@ const openUpdateModelDialog = (model) => {
     title: model.title || model.name || '',
     description: model.description || '',
     url: getModelUrl(model),
-    models: getModelItems(model),
+    models: getModelItems(model).join(','),
     app_key: getModelAppKey(model)
   });
   modelDialogVisible.value = true;
