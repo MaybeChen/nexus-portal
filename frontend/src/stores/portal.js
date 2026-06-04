@@ -84,6 +84,9 @@ export const usePortalStore = defineStore('portal', {
     },
     setTools(tools) {
       this.tools = tools;
+    },
+    setModels(models) {
+      this.models = models;
     }
   }
 });

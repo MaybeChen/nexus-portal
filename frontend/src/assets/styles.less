@@ -316,6 +316,21 @@ button {
   background: #dbeafe;
 }
 
+.model-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.model-card__actions .el-button {
+  margin-top: 0;
+}
+
+.model-card__actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .app-key {
   display: flex;
   align-items: center;
@@ -331,7 +346,8 @@ button {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-.create-skill-form .el-select {
+.create-skill-form .el-select,
+.create-model-form .el-select {
   width: 100%;
 }
 
