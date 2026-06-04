@@ -42,18 +42,18 @@ function nextPaint(delay = 300) {
   return new Promise((resolve) => window.setTimeout(resolve, delay));
 }
 
-function getExportTargets(document) {
-  const explicitTargets = Array.from(document.querySelectorAll('[data-pptx-export-target="true"]'));
+function getExportTargets(targetDocument) {
+  const explicitTargets = Array.from(targetDocument.querySelectorAll('[data-pptx-export-target="true"]'));
   if (explicitTargets.length) return explicitTargets;
 
-  const slides = Array.from(stage.querySelectorAll('.slide'));
+  const slides = Array.from(targetDocument.querySelectorAll('.slide'));
   if (slides.length) return slides;
 
   return [
-    stage.querySelector('#slide') ||
-      stage.querySelector('.slide-container') ||
-      stage.querySelector('body') ||
-      stage
+    targetDocument.querySelector('#slide') ||
+      targetDocument.querySelector('.slide-container') ||
+      targetDocument.body ||
+      targetDocument.documentElement
   ].filter(Boolean);
 }
 
@@ -78,11 +78,19 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-async function createExportIframe(html) {
+function createExportStage() {
+  const stage = document.createElement('div');
+  stage.setAttribute('data-html2pptx-export-stage', 'true');
+  stage.style.cssText = 'position: fixed; left: -200vw; top: 0; width: 1600px; height: 900px; opacity: 0; pointer-events: none; overflow: hidden;';
+  document.body.appendChild(stage);
+  return stage;
+}
+
+async function createExportIframe(html, stage) {
   const iframe = document.createElement('iframe');
   iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-popups');
-  iframe.style.cssText = 'position: fixed; left: -200vw; top: 0; width: 1600px; height: 900px; opacity: 0; pointer-events: none;';
-  document.body.appendChild(iframe);
+  iframe.style.cssText = 'display: block; width: 1600px; height: 900px; border: 0;';
+  stage.appendChild(iframe);
   const loaded = waitForIframe(iframe);
   iframe.srcdoc = html;
   await loaded;
@@ -148,6 +156,7 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
 
   const iframes = [];
   const transientUrls = [];
+  const stage = createExportStage();
   const targets = [];
 
   try {
@@ -157,10 +166,10 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
       const { html, objectUrls = [] } = await readHtmlDocument(item, fileMap);
       transientUrls.push(...objectUrls);
 
-      const renderIframe = await createExportIframe(html);
+      const renderIframe = await createExportIframe(html, stage);
       iframes.push(renderIframe);
       const snapshotHtml = extractExportSnapshot(renderIframe);
-      const snapshotIframe = await createExportIframe(snapshotHtml);
+      const snapshotIframe = await createExportIframe(snapshotHtml, stage);
       iframes.push(snapshotIframe);
 
       await waitForDocumentFonts(snapshotIframe.contentDocument);
@@ -175,6 +184,7 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
     return blob;
   } finally {
     iframes.forEach((iframe) => iframe.remove());
+    stage.remove();
     revokeWorkspaceUrls(transientUrls);
   }
 }
