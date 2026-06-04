@@ -233,6 +233,46 @@ button {
   background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
 }
 
+.tool-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-card__type {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  max-width: 112px;
+}
+
+.tool-card__type .el-tag__content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-card__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding-right: 74px;
+}
+
+.tool-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.tool-card__actions .el-button {
+  margin-top: 0;
+}
+
+.tool-card__actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .tool-card__logo {
   display: inline-grid;
   width: 48px;
@@ -276,6 +316,21 @@ button {
   background: #dbeafe;
 }
 
+.model-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.model-card__actions .el-button {
+  margin-top: 0;
+}
+
+.model-card__actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .app-key {
   display: flex;
   align-items: center;
@@ -291,7 +346,8 @@ button {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-.create-skill-form .el-select {
+.create-skill-form .el-select,
+.create-model-form .el-select {
   width: 100%;
 }
 
@@ -373,6 +429,21 @@ button {
   color: #475569;
   font-size: 13px;
   font-weight: 700;
+}
+
+.skill-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.skill-card__actions .el-button {
+  margin-top: 0;
+}
+
+.skill-card__actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .download-file-list {

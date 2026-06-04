@@ -5,36 +5,281 @@
         <p>模型商店</p>
         <h1>模型资产与 AppKey</h1>
       </div>
-      <el-button type="primary" round>申请模型</el-button>
+      <el-button type="primary" round @click="openCreateModelDialog">增加模型</el-button>
     </div>
 
-    <div class="asset-grid asset-grid--half">
-      <article v-for="model in portal.models" :key="model.id" class="asset-card model-card">
+    <div v-loading="loadingModels" class="asset-grid asset-grid--half">
+      <article v-for="model in portal.models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
         <div class="model-card__topline">
-          <h3>{{ model.name }}</h3>
+          <h3>{{ model.title || model.name }}</h3>
           <el-tag type="info">可接入</el-tag>
         </div>
         <p>{{ model.description }}</p>
         <div class="model-card__models">
-          <span v-for="item in model.supportedModels" :key="item">{{ item }}</span>
+          <span v-for="item in getModelItems(model)" :key="item">{{ item }}</span>
         </div>
         <div class="app-key">
-          <code>{{ model.appKey }}</code>
-          <el-button size="small" type="primary" plain @click="copyAppKey(model.appKey)">复制</el-button>
+          <code>{{ getModelAppKey(model) }}</code>
+          <el-button size="small" type="primary" plain @click="copyAppKey(getModelAppKey(model))">复制</el-button>
+        </div>
+        <div class="model-card__actions" v-if="canManageModel(model)">
+          <el-button type="warning" plain round @click="openUpdateModelDialog(model)">更新</el-button>
+          <el-button
+            :loading="deletingModelId === getModelId(model)"
+            type="danger"
+            plain
+            round
+            @click="handleDeleteModel(model)"
+          >
+            删除
+          </el-button>
         </div>
       </article>
     </div>
+
+    <el-empty v-if="!loadingModels && portal.models.length === 0" description="暂无模型资产" />
+
+    <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" align-center @closed="resetModelForm">
+      <el-form class="create-model-form" label-position="top">
+        <el-form-item label="名称" required>
+          <el-input v-model.trim="modelForm.title" placeholder="输入模型名称" />
+        </el-form-item>
+        <el-form-item label="描述" required>
+          <el-input v-model.trim="modelForm.description" placeholder="输入模型描述" :rows="4" type="textarea" />
+        </el-form-item>
+        <el-form-item label="地址" required>
+          <el-input v-model.trim="modelForm.url" placeholder="输入模型地址" />
+        </el-form-item>
+        <el-form-item label="模型" required>
+          <el-select
+            v-model="modelForm.models"
+            multiple
+            filterable
+            allow-create
+            default-first-option
+            placeholder="输入或选择模型，回车添加"
+          >
+            <el-option v-for="model in modelOptions" :key="model" :label="model" :value="model" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="秘钥" required>
+          <el-input v-model.trim="modelForm.app_key" placeholder="输入模型秘钥" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="modelDialogVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!canSubmitModel" :loading="submittingModel" @click="submitModel">
+          {{ modelSubmitText }}
+        </el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
 <script setup>
-import { ElMessage } from 'element-plus';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
+import { MODEL_CREATE, MODEL_DELETE, MODEL_STORE_LIST, MODEL_UPDATE } from '@/request/constant';
+import { get, post } from '@/request/webservice';
+import { useUserStore } from '@/store';
 import { usePortalStore } from '@/stores/portal';
 
 const portal = usePortalStore();
+const userStore = useUserStore();
+
+const modelOptions = ['GPT-4.1', 'GPT-4o', 'GPT-5.3-Codex', 'Vision-Pro', 'Omni-VL', 'DocScan-Max', 'DataGPT'];
+const initialModelForm = () => ({
+  id: '',
+  title: '',
+  description: '',
+  url: '',
+  models: [],
+  app_key: ''
+});
+
+const loadingModels = ref(false);
+const modelDialogVisible = ref(false);
+const submittingModel = ref(false);
+const deletingModelId = ref('');
+const editingModelId = ref('');
+const modelForm = reactive(initialModelForm());
+
+const isEditingModel = computed(() => Boolean(editingModelId.value));
+const modelDialogTitle = computed(() => (isEditingModel.value ? '更新模型' : '增加模型'));
+const modelSubmitText = computed(() => (isEditingModel.value ? '确认更新' : '确认增加'));
+const canSubmitModel = computed(() => {
+  return Boolean(
+    modelForm.title
+      && modelForm.description
+      && modelForm.url
+      && modelForm.models.length > 0
+      && modelForm.app_key
+      && (!isEditingModel.value || modelForm.id)
+      && !submittingModel.value
+  );
+});
+
+const normalizeModelList = (data) => (Array.isArray(data) ? data : []);
+const getModelId = (model = {}) => model.id || model._id || '';
+const normalizeIdentity = (value) => String(value ?? '').trim();
+const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
+const normalizeModels = (models) => {
+  if (Array.isArray(models)) {
+    return models.map(normalizeIdentity).filter(Boolean);
+  }
+
+  return String(models || '')
+    .split(/[，,\n]/)
+    .map(normalizeIdentity)
+    .filter(Boolean);
+};
+
+const getModelItems = (model = {}) => normalizeModels(model.models || model.supportedModels);
+const getModelAppKey = (model = {}) => model.app_key || model.appKey || '';
+const getModelUrl = (model = {}) => model.url || model.link || '';
+
+const isAdmin = computed(() => ['admin', '管理员'].includes(normalizeRole(userStore.role)));
+const currentUserIdentities = computed(() => {
+  return [userStore.id, userStore.employeeNumber, userStore.name]
+    .map(normalizeIdentity)
+    .filter(Boolean);
+});
+
+const getCreatorIdentities = (model = {}) => {
+  const creator = model.creator ?? model.creatorId ?? model.createdBy;
+
+  if (!creator) {
+    return [];
+  }
+
+  if (typeof creator === 'object') {
+    return [creator.id, creator._id, creator.employeeNumber, creator.name]
+      .map(normalizeIdentity)
+      .filter(Boolean);
+  }
+
+  return [normalizeIdentity(creator)].filter(Boolean);
+};
+
+const canManageModel = (model) => {
+  if (isAdmin.value) {
+    return true;
+  }
+
+  const creatorIdentities = getCreatorIdentities(model);
+
+  return creatorIdentities.some((identity) => currentUserIdentities.value.includes(identity));
+};
+
+const loadModels = () => {
+  loadingModels.value = true;
+  get(MODEL_STORE_LIST, {}, (data, error) => {
+    loadingModels.value = false;
+
+    if (error) {
+      ElMessage.error('模型列表获取失败');
+      return;
+    }
+
+    portal.setModels(normalizeModelList(data));
+  });
+};
+
+const resetModelForm = () => {
+  editingModelId.value = '';
+  Object.assign(modelForm, initialModelForm());
+};
+
+const openCreateModelDialog = () => {
+  editingModelId.value = '';
+  Object.assign(modelForm, initialModelForm());
+  modelDialogVisible.value = true;
+};
+
+const openUpdateModelDialog = (model) => {
+  const modelId = getModelId(model);
+
+  if (!modelId) {
+    ElMessage.error('模型信息缺少 ID，无法更新');
+    return;
+  }
+
+  editingModelId.value = modelId;
+  Object.assign(modelForm, {
+    id: modelId,
+    title: model.title || model.name || '',
+    description: model.description || '',
+    url: getModelUrl(model),
+    models: getModelItems(model),
+    app_key: getModelAppKey(model)
+  });
+  modelDialogVisible.value = true;
+};
+
+const submitModel = async () => {
+  if (!canSubmitModel.value) {
+    return;
+  }
+
+  const { id, title, app_key, description, models, url } = modelForm;
+  const isUpdate = isEditingModel.value;
+  const path = isUpdate ? MODEL_UPDATE : MODEL_CREATE;
+  const payload = isUpdate ? { id, title, app_key, description, models, url } : { title, app_key, description, models, url };
+
+  submittingModel.value = true;
+
+  try {
+    await post(path, payload);
+    ElMessage.success(isUpdate ? '模型更新成功' : '模型增加成功');
+    modelDialogVisible.value = false;
+    loadModels();
+  } catch (error) {
+    ElMessage.error(isUpdate ? '模型更新失败' : '模型增加失败');
+  } finally {
+    submittingModel.value = false;
+  }
+};
+
+const handleDeleteModel = async (model) => {
+  const modelId = getModelId(model);
+
+  if (!modelId) {
+    ElMessage.error('模型信息缺少 ID，无法删除');
+    return;
+  }
+
+  if (deletingModelId.value) {
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(`确认删除模型「${model.title || model.name || modelId}」吗？`, '删除模型', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消'
+    });
+
+    deletingModelId.value = modelId;
+    await post(MODEL_DELETE, { id: modelId });
+    ElMessage.success('模型删除成功');
+    loadModels();
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error('模型删除失败');
+    }
+  } finally {
+    deletingModelId.value = '';
+  }
+};
 
 const copyAppKey = async (appKey) => {
+  if (!appKey) {
+    ElMessage.error('AppKey 为空，无法复制');
+    return;
+  }
+
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(appKey);
   } else {
@@ -50,4 +295,6 @@ const copyAppKey = async (appKey) => {
 
   ElMessage.success('AppKey 已复制');
 };
+
+onMounted(loadModels);
 </script>
