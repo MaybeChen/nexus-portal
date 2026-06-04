@@ -1,4 +1,4 @@
-import { getDomToPptx } from './domToPptxLoader';
+import { exportToPptx } from './dom-to-pptx/src/index.js';
 import { readHtmlDocument } from './fileWorkspace';
 
 const EXPORT_OPTIONS = {
@@ -70,7 +70,6 @@ async function createExportIframe(html) {
 export async function exportItemsToPptx({ items, fileMap, filename, onProgress }) {
   if (!items.length) throw new Error('没有可导出的 HTML 文件');
 
-  const domToPptx = await getDomToPptx();
   const iframes = [];
   const targets = [];
 
@@ -85,7 +84,7 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
     }
 
     if (!targets.length) throw new Error('没有找到可导出的页面节点');
-    const blob = await domToPptx.exportToPptx(targets, EXPORT_OPTIONS);
+    const blob = await exportToPptx(targets, EXPORT_OPTIONS);
     downloadBlob(blob, filename);
     return blob;
   } finally {
