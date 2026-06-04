@@ -3,6 +3,7 @@ import opentype from 'opentype.js';
 import { fontToEot } from './font-utils.js';
 
 const START_RID = 201314;
+
 const P_NS = 'http://schemas.openxmlformats.org/presentationml/2006/main';
 const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 const CONTENT_TYPES_NS = 'http://schemas.openxmlformats.org/package/2006/content-types';
@@ -59,65 +60,115 @@ export class PPTXEmbedFonts {
   }
 
   // --- XML Manipulation Methods ---
+
   async updateContentTypesXML() {
     const file = this.zip.file('[Content_Types].xml');
-    if (!file) return;
-    const xml = await file.async('string');
-    const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    const types = doc.documentElement;
-    if (!Array.from(types.getElementsByTagName('Default')).some((node) => node.getAttribute('Extension') === 'fntdata')) {
-      const def = doc.createElementNS(CONTENT_TYPES_NS, 'Default');
-      def.setAttribute('Extension', 'fntdata');
-      def.setAttribute('ContentType', 'application/x-fontdata');
-      types.appendChild(def);
+    if (!file) throw new Error('[Content_Types].xml not found');
+
+    const xmlStr = await file.async('string');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, 'text/xml');
+
+    const types = doc.getElementsByTagName('Types')[0];
+    const defaults = Array.from(doc.getElementsByTagName('Default'));
+
+    const hasFntData = defaults.some((el) => el.getAttribute('Extension') === 'fntdata');
+
+    if (!hasFntData) {
+      const el = doc.createElementNS(CONTENT_TYPES_NS, 'Default');
+      el.setAttribute('Extension', 'fntdata');
+      el.setAttribute('ContentType', 'application/x-fontdata');
+      types.insertBefore(el, types.firstChild);
     }
+
     this.zip.file('[Content_Types].xml', new XMLSerializer().serializeToString(doc));
   }
 
   async updatePresentationXML() {
     const file = this.zip.file('ppt/presentation.xml');
-    if (!file) return;
-    const xml = await file.async('string');
-    const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    const presentation = doc.documentElement;
-    let embeddedFontLst = doc.getElementsByTagNameNS(P_NS, 'embeddedFontLst')[0];
+    if (!file) throw new Error('ppt/presentation.xml not found');
+
+    const xmlStr = await file.async('string');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, 'text/xml');
+    const presentation = doc.getElementsByTagName('p:presentation')[0];
+
+    // Enable embedding flags
+    presentation.setAttribute('saveSubsetFonts', 'true');
+    presentation.setAttribute('embedTrueTypeFonts', 'true');
+
+    // Find or create embeddedFontLst
+    let embeddedFontLst = presentation.getElementsByTagName('p:embeddedFontLst')[0];
+
     if (!embeddedFontLst) {
       embeddedFontLst = doc.createElementNS(P_NS, 'p:embeddedFontLst');
-      presentation.appendChild(embeddedFontLst);
+
+      // Insert before defaultTextStyle or at end
+      const defaultTextStyle =
+        presentation.getElementsByTagName('p:defaultTextStyle')[0] ||
+        presentation.getElementsByTagNameNS(P_NS, 'defaultTextStyle')[0];
+      if (defaultTextStyle) {
+        presentation.insertBefore(embeddedFontLst, defaultTextStyle);
+      } else {
+        presentation.appendChild(embeddedFontLst);
+      }
     }
-    for (const font of this.fonts) {
-      const embeddedFont = doc.createElementNS(P_NS, 'p:embeddedFont');
-      const fontNode = doc.createElementNS(P_NS, 'p:font');
-      fontNode.setAttribute('typeface', font.name);
-      const regular = doc.createElementNS(P_NS, 'p:regular');
-      regular.setAttributeNS(R_NS, 'r:id', `rId${font.rid}`);
-      embeddedFont.appendChild(fontNode);
-      embeddedFont.appendChild(regular);
-      embeddedFontLst.appendChild(embeddedFont);
-    }
+
+    // Add font references
+    this.fonts.forEach((font) => {
+      // Check if already exists
+      const existing =
+        Array.from(embeddedFontLst.getElementsByTagNameNS(P_NS, 'font')).find(
+          (node) => node.getAttribute('typeface') === font.name
+        ) ||
+        Array.from(embeddedFontLst.getElementsByTagName('p:font')).find(
+          (node) => node.getAttribute('typeface') === font.name
+        );
+
+      if (!existing) {
+        const embedFont = doc.createElementNS(P_NS, 'p:embeddedFont');
+
+        const fontNode = doc.createElementNS(P_NS, 'p:font');
+        fontNode.setAttribute('typeface', font.name);
+        embedFont.appendChild(fontNode);
+
+        const regular = doc.createElementNS(P_NS, 'p:regular');
+        regular.setAttributeNS(R_NS, 'r:id', `rId${font.rid}`);
+        embedFont.appendChild(regular);
+
+        embeddedFontLst.appendChild(embedFont);
+      }
+    });
+
     this.zip.file('ppt/presentation.xml', new XMLSerializer().serializeToString(doc));
   }
 
   async updateRelsPresentationXML() {
-    const path = 'ppt/_rels/presentation.xml.rels';
-    const file = this.zip.file(path);
-    if (!file) return;
-    const xml = await file.async('string');
-    const doc = new DOMParser().parseFromString(xml, 'text/xml');
-    const relationships = doc.documentElement;
-    for (const font of this.fonts) {
+    const file = this.zip.file('ppt/_rels/presentation.xml.rels');
+    if (!file) throw new Error('presentation.xml.rels not found');
+
+    const xmlStr = await file.async('string');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlStr, 'text/xml');
+    const relationships = doc.getElementsByTagName('Relationships')[0];
+
+    this.fonts.forEach((font) => {
       const rel = doc.createElementNS(RELS_NS, 'Relationship');
       rel.setAttribute('Id', `rId${font.rid}`);
-      rel.setAttribute('Type', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/font');
-      rel.setAttribute('Target', `fonts/font${font.rid}.fntdata`);
+      rel.setAttribute('Target', `fonts/${font.rid}.fntdata`);
+      rel.setAttribute(
+        'Type',
+        'http://schemas.openxmlformats.org/officeDocument/2006/relationships/font'
+      );
       relationships.appendChild(rel);
-    }
-    this.zip.file(path, new XMLSerializer().serializeToString(doc));
+    });
+
+    this.zip.file('ppt/_rels/presentation.xml.rels', new XMLSerializer().serializeToString(doc));
   }
 
   updateFontFiles() {
-    for (const font of this.fonts) {
-      this.zip.file(`ppt/fonts/font${font.rid}.fntdata`, font.data);
-    }
+    this.fonts.forEach((font) => {
+      this.zip.file(`ppt/fonts/${font.rid}.fntdata`, font.data);
+    });
   }
 }
