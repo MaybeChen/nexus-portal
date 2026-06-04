@@ -27,6 +27,7 @@ import {
   getAutoDetectedFonts,
   extractTableData,
   collectTextParts,
+  getComputedStyleForNode,
 } from './utils.js';
 import { getProcessedImage } from './image-processor.js';
 const PPI = 96;
@@ -267,7 +268,7 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
     const nodeType = node.nodeType;
 
     if (nodeType === 1) {
-      nodeStyle = window.getComputedStyle(node);
+      nodeStyle = getComputedStyleForNode(node);
       const elOpacity = parseFloat(nodeStyle.opacity);
       if (!isNaN(elOpacity)) {
         currentOpacity *= elOpacity;
@@ -404,7 +405,7 @@ function prepareRenderItem(node, layout, order, pptx, zIndex, nodeStyle, globalO
     const parent = node.parentElement;
     if (!parent) return null;
     const rect = parent.getBoundingClientRect();
-    const style = window.getComputedStyle(parent);
+    const style = getComputedStyleForNode(parent);
     return {
       items: [{
         type: 'text',

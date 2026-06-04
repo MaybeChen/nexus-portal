@@ -1,4 +1,12 @@
 // src/utils.js
+export function getOwnerWindow(node) {
+  return node?.ownerDocument?.defaultView || window;
+}
+
+export function getComputedStyleForNode(node) {
+  return getOwnerWindow(node).getComputedStyle(node);
+}
+
 export function parseColor(color) {
   if (!color || color === 'transparent' || color === 'rgba(0, 0, 0, 0)') return null;
   const canvas = document.createElement('canvas');
@@ -111,7 +119,7 @@ export function generateCompositeBorderSVG() {
 export function isClippedByParent(el, root) {
   let current = el.parentElement;
   while (current && current !== root) {
-    const style = window.getComputedStyle(current);
+    const style = getComputedStyleForNode(current);
     if (['hidden', 'clip', 'scroll', 'auto'].includes(style.overflow)) return true;
     current = current.parentElement;
   }
@@ -128,7 +136,7 @@ export function getUsedFontFamilies(targets) {
     const root = typeof target === 'string' ? document.querySelector(target) : target;
     if (!root) return;
     [root, ...Array.from(root.querySelectorAll('*'))].forEach((element) => {
-      const family = window.getComputedStyle(element).fontFamily;
+      const family = getComputedStyleForNode(element).fontFamily;
       if (family) families.add(family);
     });
   });
@@ -156,14 +164,14 @@ export async function getAutoDetectedFonts(usedFamilies = []) {
 }
 
 export function extractTableData(table, scale = 1) {
-  const rows = Array.from(table.rows).map((row) => Array.from(row.cells).map((cell) => ({ text: cell.textContent.trim(), options: getTextStyle(window.getComputedStyle(cell)) })));
+  const rows = Array.from(table.rows).map((row) => Array.from(row.cells).map((cell) => ({ text: cell.textContent.trim(), options: getTextStyle(getComputedStyleForNode(cell)) })));
   const colCount = Math.max(...rows.map((row) => row.length), 1);
   const rect = table.getBoundingClientRect();
   return { rows, colWidths: Array.from({ length: colCount }, () => (rect.width / colCount / 96) * scale) };
 }
 
 export function collectTextParts(el) {
-  const style = window.getComputedStyle(el);
+  const style = getComputedStyleForNode(el);
   const text = el.textContent || '';
   const options = getTextStyle(style);
   const href = el.closest?.('a')?.href;
