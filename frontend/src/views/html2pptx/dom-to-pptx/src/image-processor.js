@@ -1,4 +1,5 @@
 // src/image-processor.js
+
 export async function getProcessedImage(
   src,
   targetW,
@@ -36,12 +37,14 @@ export async function getProcessedImage(
         targetW / (r.br + r.bl) || Infinity,
         targetH / (r.bl + r.tl) || Infinity
       );
+
       if (factor < 1) {
         r.tl *= factor;
         r.tr *= factor;
         r.br *= factor;
         r.bl *= factor;
       }
+
       ctx.moveTo(r.tl, 0);
       ctx.lineTo(targetW - r.tr, 0);
       ctx.arcTo(targetW, 0, targetW, r.tr, r.tr);
@@ -62,6 +65,7 @@ export async function getProcessedImage(
       const wRatio = targetW / img.width;
       const hRatio = targetH / img.height;
       let renderW, renderH;
+
       if (objectFit === 'contain') {
         const fitScale = Math.min(wRatio, hRatio);
         renderW = img.width * fitScale;
@@ -86,6 +90,7 @@ export async function getProcessedImage(
       // Handle Object Position (simplified parsing for "x% y%" or keywords)
       let posX = 0.5; // Default center
       let posY = 0.5;
+
       const posParts = objectPosition.split(' ');
       if (posParts.length > 0) {
         const parsePos = (val) => {
@@ -101,10 +106,12 @@ export async function getProcessedImage(
 
       const renderX = (targetW - renderW) * posX;
       const renderY = (targetH - renderH) * posY;
+
       ctx.drawImage(img, renderX, renderY, renderW, renderH);
 
       resolve(canvas.toDataURL('image/png'));
     };
+
     img.onerror = () => resolve(null);
     img.src = src;
   });
