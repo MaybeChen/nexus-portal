@@ -12,19 +12,23 @@ const EXPORT_OPTIONS = {
 function waitForIframe(iframe) {
   return new Promise((resolve) => {
     iframe.onload = async () => {
-      await waitForDocumentStable(iframe.contentDocument);
+      await waitForDocumentFonts(iframe.contentDocument);
+      await waitForImages(iframe.contentDocument);
+      await nextPaint();
       resolve();
     };
   });
 }
 
-async function waitForDocumentStable(document) {
+async function waitForDocumentFonts(document) {
   if (document?.fonts?.ready) {
     await document.fonts.ready.catch(() => undefined);
   }
+}
 
+async function waitForImages(root) {
   await Promise.all(
-    Array.from(document?.images || []).map((image) => {
+    Array.from(root?.querySelectorAll?.('img') || root?.images || []).map((image) => {
       if (image.complete) return undefined;
       return new Promise((resolveImage) => {
         image.addEventListener('load', resolveImage, { once: true });
@@ -32,12 +36,14 @@ async function waitForDocumentStable(document) {
       });
     })
   );
-
-  await new Promise((resolve) => window.setTimeout(resolve, 300));
 }
 
-function getExportTargets(stage) {
-  const explicitTargets = Array.from(stage.querySelectorAll('[data-pptx-export-target="true"]'));
+function nextPaint(delay = 300) {
+  return new Promise((resolve) => window.setTimeout(resolve, delay));
+}
+
+function getExportTargets(document) {
+  const explicitTargets = Array.from(document.querySelectorAll('[data-pptx-export-target="true"]'));
   if (explicitTargets.length) return explicitTargets;
 
   const slides = Array.from(stage.querySelectorAll('.slide'));
@@ -83,22 +89,58 @@ async function createExportIframe(html) {
   return iframe;
 }
 
-async function cloneIframeToStage(iframe, stage) {
-  const clonedRoot = iframe.contentDocument.documentElement.cloneNode(true);
-  cleanTextForPpt(clonedRoot);
+function collectAccessibleCssRules(document) {
+  const cssTexts = [];
 
-  const container = document.createElement('section');
-  container.appendChild(clonedRoot);
-  stage.appendChild(container);
-  await waitForDocumentStable(document);
-  return getExportTargets(container);
+  Array.from(document.styleSheets || []).forEach((sheet) => {
+    try {
+      const rules = Array.from(sheet.cssRules || []);
+      const cssText = rules.map((rule) => rule.cssText).filter(Boolean).join('\n');
+      if (cssText) cssTexts.push(cssText);
+    } catch {
+      // Cross-origin stylesheets are left as their original link tags in the snapshot.
+    }
+  });
+
+  Array.from(document.adoptedStyleSheets || []).forEach((sheet) => {
+    try {
+      const cssText = Array.from(sheet.cssRules || []).map((rule) => rule.cssText).filter(Boolean).join('\n');
+      if (cssText) cssTexts.push(cssText);
+    } catch {
+      // Ignore unreadable adopted stylesheets.
+    }
+  });
+
+  return cssTexts;
 }
 
-function createOffscreenStage() {
-  const stage = document.createElement('div');
-  stage.style.cssText = 'position: fixed; left: -100000px; top: 0; width: auto; height: auto; opacity: 0; pointer-events: none;';
-  document.body.appendChild(stage);
-  return stage;
+function extractExportSnapshot(iframe) {
+  const sourceDocument = iframe.contentDocument;
+  const clonedDocument = sourceDocument.documentElement.cloneNode(true);
+  cleanTextForPpt(clonedDocument);
+
+  const parser = new DOMParser();
+  const snapshot = parser.parseFromString('<!doctype html><html><head></head><body></body></html>', 'text/html');
+  const htmlAttrs = Array.from(sourceDocument.documentElement.attributes || []);
+  htmlAttrs.forEach((attribute) => snapshot.documentElement.setAttribute(attribute.name, attribute.value));
+
+  Array.from(clonedDocument.querySelector('head')?.childNodes || []).forEach((node) => {
+    snapshot.head.appendChild(node.cloneNode(true));
+  });
+
+  const cssTexts = collectAccessibleCssRules(sourceDocument);
+  if (cssTexts.length) {
+    const style = snapshot.createElement('style');
+    style.setAttribute('data-html2pptx-snapshot', 'true');
+    style.textContent = cssTexts.join('\n');
+    snapshot.head.appendChild(style);
+  }
+
+  Array.from(clonedDocument.querySelector('body')?.childNodes || []).forEach((node) => {
+    snapshot.body.appendChild(node.cloneNode(true));
+  });
+
+  return `<!doctype html>\n${snapshot.documentElement.outerHTML}`;
 }
 
 export async function exportItemsToPptx({ items, fileMap, filename, onProgress }) {
@@ -106,7 +148,6 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
 
   const iframes = [];
   const transientUrls = [];
-  const stage = createOffscreenStage();
   const targets = [];
 
   try {
@@ -115,9 +156,17 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
       onProgress?.({ index, total: items.length, item });
       const { html, objectUrls = [] } = await readHtmlDocument(item, fileMap);
       transientUrls.push(...objectUrls);
-      const iframe = await createExportIframe(html);
-      iframes.push(iframe);
-      targets.push(...(await cloneIframeToStage(iframe, stage)));
+
+      const renderIframe = await createExportIframe(html);
+      iframes.push(renderIframe);
+      const snapshotHtml = extractExportSnapshot(renderIframe);
+      const snapshotIframe = await createExportIframe(snapshotHtml);
+      iframes.push(snapshotIframe);
+
+      await waitForDocumentFonts(snapshotIframe.contentDocument);
+      await waitForImages(snapshotIframe.contentDocument);
+      await nextPaint();
+      targets.push(...getExportTargets(snapshotIframe.contentDocument));
     }
 
     if (!targets.length) throw new Error('没有找到可导出的页面节点');
@@ -126,7 +175,6 @@ export async function exportItemsToPptx({ items, fileMap, filename, onProgress }
     return blob;
   } finally {
     iframes.forEach((iframe) => iframe.remove());
-    stage.remove();
     revokeWorkspaceUrls(transientUrls);
   }
 }

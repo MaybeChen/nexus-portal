@@ -1,5 +1,23 @@
 const HTML_FILE_PATTERN = /\.html?$/i;
-const ASSET_ATTRIBUTES = ['src', 'href', 'poster'];
+const RESOURCE_REWRITE_RULES = [
+  { selector: 'img[src]', attribute: 'src', label: '图片资源' },
+  { selector: 'link[href]', attribute: 'href', label: '链接资源' },
+  { selector: 'source[src]', attribute: 'src', label: '媒体资源' },
+  { selector: 'video[src]', attribute: 'src', label: '视频资源' },
+  { selector: 'video[poster]', attribute: 'poster', label: '视频封面资源' },
+  { selector: 'audio[src]', attribute: 'src', label: '音频资源' },
+  { selector: 'script[src]', attribute: 'src', label: '脚本资源' }
+];
+const KNOWN_ASSET_MAPPINGS = [
+  {
+    remotePrefix: 'https://cdn.digitalhumanai.top/slidagent/pptx-craft/assets/',
+    localPrefixes: ['assets/', 'pptx-craft/assets/', '']
+  },
+  {
+    remotePrefix: 'https://npmmirror.com/mirrors/fonteditor-core@2.6.3/',
+    localPrefixes: ['fonteditor-core/', 'fonteditor-core@2.6.3/', 'assets/fonteditor-core/', '']
+  }
+];
 
 function normalizePath(path) {
   return String(path || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
@@ -16,15 +34,39 @@ function getPathSuffix(rawUrl) {
   return match?.[1] || '';
 }
 
+function stripQueryAndHash(rawUrl) {
+  return String(rawUrl || '').trim().split(/[?#]/)[0];
+}
+
 function isExternalOrSpecialUrl(rawUrl) {
   return /^(data:|blob:|https?:|mailto:|tel:|#)/i.test(String(rawUrl || '').trim());
 }
 
-function resolveRelativePath(basePath, rawUrl) {
-  const source = String(rawUrl || '').trim();
-  if (!source || isExternalOrSpecialUrl(source)) return null;
+function getAsset(fileMap, assetPath) {
+  const record = fileMap.get(assetPath);
+  if (!record) return null;
+  return typeof record === 'string' ? { url: record } : record;
+}
 
-  const cleanUrl = source.split(/[?#]/)[0];
+function findKnownAssetPath(rawUrl, fileMap) {
+  const cleanUrl = stripQueryAndHash(rawUrl);
+  const mapping = KNOWN_ASSET_MAPPINGS.find(({ remotePrefix }) => cleanUrl.startsWith(remotePrefix));
+  if (!mapping) return null;
+
+  const relativePath = normalizePath(cleanUrl.slice(mapping.remotePrefix.length));
+  const candidates = mapping.localPrefixes.map((prefix) => normalizePath(`${prefix}${relativePath}`));
+  return candidates.find((candidate) => getAsset(fileMap, candidate)) || candidates[0] || null;
+}
+
+function resolveRelativePath(basePath, rawUrl, fileMap) {
+  const source = String(rawUrl || '').trim();
+  if (!source) return null;
+
+  const knownAssetPath = findKnownAssetPath(source, fileMap);
+  if (knownAssetPath) return knownAssetPath;
+  if (isExternalOrSpecialUrl(source)) return null;
+
+  const cleanUrl = stripQueryAndHash(source);
   const path = cleanUrl.startsWith('/') ? cleanUrl.slice(1) : [dirname(basePath), cleanUrl].filter(Boolean).join('/');
   const resolved = [];
 
@@ -47,19 +89,23 @@ function preserveQueryAndHash(rawUrl, blobUrl) {
   return `${blobUrl}${getPathSuffix(rawUrl)}`;
 }
 
+function rewriteUrl(rawUrl, basePath, fileMap, warnings, label) {
+  const assetPath = resolveRelativePath(basePath, rawUrl, fileMap);
+  if (!assetPath) return rawUrl;
+
+  const asset = getAsset(fileMap, assetPath);
+  if (!asset?.url) {
+    warnings.add(`未找到${label}：${rawUrl}`);
+    return rawUrl;
+  }
+
+  return preserveQueryAndHash(rawUrl, asset.url);
+}
+
 function rewriteCssUrls(cssText, cssPath, fileMap, warnings) {
   return String(cssText || '').replace(/url\((['"]?)(.*?)\1\)/gi, (full, quote, rawUrl) => {
-    const trimmedUrl = String(rawUrl || '').trim();
-    const assetPath = resolveRelativePath(cssPath, trimmedUrl);
-    if (!assetPath) return full;
-
-    const asset = getAsset(fileMap, assetPath);
-    if (!asset?.url) {
-      warnings.add(`未找到样式资源：${trimmedUrl}`);
-      return full;
-    }
-
-    return `url(${quote}${preserveQueryAndHash(trimmedUrl, asset.url)}${quote})`;
+    const rewrittenUrl = rewriteUrl(String(rawUrl || '').trim(), cssPath, fileMap, warnings, '样式资源');
+    return rewrittenUrl === rawUrl ? full : `url(${quote}${rewrittenUrl}${quote})`;
   });
 }
 
@@ -68,16 +114,8 @@ function rewriteSrcset(value, htmlPath, fileMap, warnings) {
     .split(',')
     .map((candidate) => {
       const parts = candidate.trim().split(/\s+/);
-      const assetPath = resolveRelativePath(htmlPath, parts[0]);
-      if (!assetPath) return candidate;
-
-      const asset = getAsset(fileMap, assetPath);
-      if (!asset?.url) {
-        warnings.add(`未找到图片资源：${parts[0]}`);
-        return candidate;
-      }
-
-      parts[0] = preserveQueryAndHash(parts[0], asset.url);
+      if (!parts[0]) return candidate;
+      parts[0] = rewriteUrl(parts[0], htmlPath, fileMap, warnings, '图片资源');
       return parts.join(' ');
     })
     .join(', ');
@@ -91,7 +129,7 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
     if (!rel.split(/\s+/).includes('stylesheet')) continue;
 
     const rawUrl = link.getAttribute('href');
-    const cssPath = resolveRelativePath(htmlPath, rawUrl);
+    const cssPath = resolveRelativePath(htmlPath, rawUrl, fileMap);
     if (!cssPath) continue;
 
     const asset = getAsset(fileMap, cssPath);
@@ -106,6 +144,17 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
     transientUrls.push(cssUrl);
     link.setAttribute('href', preserveQueryAndHash(rawUrl, cssUrl));
   }
+}
+
+function rewriteResourceElements(document, htmlPath, fileMap, warnings) {
+  RESOURCE_REWRITE_RULES.forEach(({ selector, attribute, label }) => {
+    document.querySelectorAll(selector).forEach((element) => {
+      if (selector === 'link[href]' && element.matches('link[rel~="stylesheet"]')) return;
+      const rawUrl = element.getAttribute(attribute);
+      const rewrittenUrl = rewriteUrl(rawUrl, htmlPath, fileMap, warnings, label);
+      if (rewrittenUrl !== rawUrl) element.setAttribute(attribute, rewrittenUrl);
+    });
+  });
 }
 
 export function buildWorkspace(files) {
@@ -140,24 +189,7 @@ export async function readHtmlDocument(item, fileMap) {
   document.head.prepend(base);
 
   await rewriteLinkedStylesheets(document, item.path, fileMap, warnings, transientUrls);
-
-  ASSET_ATTRIBUTES.forEach((attribute) => {
-    document.querySelectorAll(`[${attribute}]`).forEach((element) => {
-      if (attribute === 'href' && element.matches('link[rel~="stylesheet"]')) return;
-
-      const rawUrl = element.getAttribute(attribute);
-      const assetPath = resolveRelativePath(item.path, rawUrl);
-      if (!assetPath) return;
-
-      const asset = getAsset(fileMap, assetPath);
-      if (!asset?.url) {
-        warnings.add(`未找到资源：${rawUrl}`);
-        return;
-      }
-
-      element.setAttribute(attribute, preserveQueryAndHash(rawUrl, asset.url));
-    });
-  });
+  rewriteResourceElements(document, item.path, fileMap, warnings);
 
   document.querySelectorAll('[srcset]').forEach((element) => {
     element.setAttribute('srcset', rewriteSrcset(element.getAttribute('srcset'), item.path, fileMap, warnings));
