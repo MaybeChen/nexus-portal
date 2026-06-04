@@ -79,6 +79,12 @@ function resolveRelativePath(basePath, rawUrl, fileMap) {
   return resolved.join('/');
 }
 
+function getAsset(fileMap, assetPath) {
+  const record = fileMap.get(assetPath);
+  if (!record) return null;
+  return typeof record === 'string' ? { url: record } : record;
+}
+
 function preserveQueryAndHash(rawUrl, blobUrl) {
   return `${blobUrl}${getPathSuffix(rawUrl)}`;
 }

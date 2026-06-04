@@ -46,14 +46,14 @@ function getExportTargets(document) {
   const explicitTargets = Array.from(document.querySelectorAll('[data-pptx-export-target="true"]'));
   if (explicitTargets.length) return explicitTargets;
 
-  const slides = Array.from(document.querySelectorAll('.slide'));
+  const slides = Array.from(stage.querySelectorAll('.slide'));
   if (slides.length) return slides;
 
   return [
-    document.querySelector('#slide') ||
-      document.querySelector('.slide-container') ||
-      document.body ||
-      document.documentElement
+    stage.querySelector('#slide') ||
+      stage.querySelector('.slide-container') ||
+      stage.querySelector('body') ||
+      stage
   ].filter(Boolean);
 }
 
