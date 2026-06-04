@@ -17,13 +17,16 @@ export async function fontToEot(type, fontBuffer) {
   };
 
   const font = Font.create(fontBuffer, options);
+
   const eotBuffer = font.write({
     type: 'eot',
     toBuffer: true,
   });
+
   if (eotBuffer instanceof ArrayBuffer) {
     return eotBuffer;
   }
+
   // Ensure we return an ArrayBuffer
   return eotBuffer.buffer.slice(eotBuffer.byteOffset, eotBuffer.byteOffset + eotBuffer.byteLength);
 }
