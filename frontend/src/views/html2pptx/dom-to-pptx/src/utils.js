@@ -1086,14 +1086,15 @@ export async function getAutoDetectedFonts(usedFamilies) {
       for (const rule of Array.from(rules)) {
         if (rule.constructor.name === 'CSSFontFaceRule' || rule.type === 5) {
           const familyName = rule.style.getPropertyValue('font-family').replace(/['"]/g, '').trim();
+          const pptFontName = normalizeFontFaceForPpt(rule.style);
 
-          if (usedFamilies.has(familyName)) {
+          if (usedFamilies.has(familyName) || usedFamilies.has(pptFontName)) {
             const src = rule.style.getPropertyValue('src');
             const url = extractUrl(src);
 
             if (url && !processedUrls.has(url)) {
               processedUrls.add(url);
-              foundFonts.push({ name: familyName, url: url });
+              foundFonts.push({ name: pptFontName, url: url });
             }
           }
         }
