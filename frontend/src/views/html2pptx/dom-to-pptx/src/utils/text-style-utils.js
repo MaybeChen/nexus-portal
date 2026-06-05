@@ -241,8 +241,7 @@ export function collectTextParts(
     if (content && content !== 'none' && content !== 'normal' && content !== '""') {
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
-      if (cleanContent.trim()) {
-        if (shouldSkipTextForPpt(cleanContent, beforeStyle)) return;
+      if (cleanContent.trim() && !shouldSkipTextForPpt(cleanContent, beforeStyle)) {
         const textOpts = getTextStyle(beforeStyle, scale, false, inheritedOpacity);
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
@@ -349,8 +348,7 @@ export function collectTextParts(
     if (content && content !== 'none' && content !== 'normal' && content !== '""') {
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
-      if (cleanContent.trim()) {
-        if (shouldSkipTextForPpt(cleanContent, afterStyle)) return;
+      if (cleanContent.trim() && !shouldSkipTextForPpt(cleanContent, afterStyle)) {
         const textOpts = getTextStyle(afterStyle, scale, false, inheritedOpacity);
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
