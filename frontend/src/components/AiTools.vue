@@ -5,7 +5,7 @@
         <p>AI工具</p>
         <h1>智能应用工作台</h1>
       </div>
-      <el-button type="primary" round @click="openCreateToolDialog">创建工具</el-button>
+      <el-button class="primary-action" type="primary" round @click="openCreateToolDialog">＋ 创建工具</el-button>
     </div>
 
     <div class="category-tabs">
@@ -22,6 +22,7 @@
 
     <div v-loading="loadingTools" class="asset-grid asset-grid--quarter">
       <article v-for="tool in portal.filteredTools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
+        <img class="asset-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="工具图标占位" />
         <el-tag class="tool-card__type" type="success" effect="light">{{ tool.type || '未分类' }}</el-tag>
         <div class="tool-card__content">
           <h3>{{ tool.title || tool.name }}</h3>

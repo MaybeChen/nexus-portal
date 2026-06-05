@@ -4,12 +4,14 @@
       <div>
         <p>Skill Hub</p>
         <h1>可复用技能资产</h1>
+          <small class="workspace-panel__subtitle">沉淀可复用技能，提升团队效率，释放智能生产力。</small>
       </div>
-      <el-button type="primary" round @click="openCreateSkillDialog">发布技能</el-button>
+      <el-button class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
     </div>
 
     <div v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
       <article v-for="skill in portal.skills" :key="skill.id || skill.name" class="asset-card skill-card">
+        <img class="asset-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="技能图标占位" />
         <el-tag class="skill-card__type" type="primary" effect="light">{{ skill.type || '未分类' }}</el-tag>
         <div class="skill-card__content">
           <span class="skill-card__title">{{ skill.title || skill.name }}</span>
