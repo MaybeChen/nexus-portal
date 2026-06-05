@@ -1,6 +1,4 @@
 import html2canvas from 'html2canvas';
-import { isFontAwesomeStyle } from '../utils.js';
-
 export async function elementToCanvasImage(node, widthPx, heightPx) {
   return new Promise((resolve) => {
     const originalId = node.id;
@@ -24,10 +22,6 @@ export async function elementToCanvasImage(node, widthPx, heightPx) {
       onclone: (clonedDoc) => {
         const clonedNode = clonedDoc.getElementById(tempId);
         if (clonedNode) {
-          if (isFontAwesomeStyle(style)) {
-            clonedNode.style.setProperty('font-family', style.fontFamily, 'important');
-          }
-
           const images = clonedNode.querySelectorAll('img');
           images.forEach((img) => {
             img.style.setProperty('display', 'inline-block', 'important');
@@ -40,9 +34,6 @@ export async function elementToCanvasImage(node, widthPx, heightPx) {
             clonedNode.style.display = 'inline-flex';
             clonedNode.style.justifyContent = 'center';
             clonedNode.style.alignItems = 'center';
-            if (isFontAwesomeStyle(style)) {
-              clonedNode.style.setProperty('font-family', style.fontFamily, 'important');
-            }
             clonedNode.style.margin = '0';
             clonedNode.style.lineHeight = '1';
             clonedNode.style.verticalAlign = 'middle';

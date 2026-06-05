@@ -1,4 +1,4 @@
-import { parseColor, getTextStyle } from '../utils.js';
+import { parseColor, getTextStyle, shouldSkipTextForPpt } from '../utils.js';
 import { PX_TO_INCH } from '../constants.js';
 
 export function getPseudoElementRect(hostRect, pseudoStyle) {
@@ -97,7 +97,9 @@ export function getPseudoElementRect(hostRect, pseudoStyle) {
 export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIndex, domOrder, pptx) {
   const pseudoStyle = window.getComputedStyle(node, pseudoType);
   const content = pseudoStyle.content;
-  const hasContent = content && content !== 'none' && content !== 'normal' && content !== '""';
+  const rawHasContent = content && content !== 'none' && content !== 'normal' && content !== '""';
+  const cleanText = rawHasContent ? content.replace(/^['"]|['"]$/g, '') : '';
+  const hasContent = rawHasContent && !shouldSkipTextForPpt(cleanText, pseudoStyle);
 
   const bgColor = parseColor(pseudoStyle.backgroundColor);
   const hasBg = bgColor.hex && bgColor.opacity > 0;
@@ -120,7 +122,6 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
   const isCircle = borderRadius >= Math.min(rect.width, rect.height) / 2 - 1;
 
   if (hasContent) {
-    const cleanText = content.replace(/^['"]|['"]$/g, '');
     const textOpts = getTextStyle(pseudoStyle, scale, false);
     const textOptions = {
       x,

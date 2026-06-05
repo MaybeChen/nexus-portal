@@ -42,6 +42,13 @@ function nextPaint(delay = 300) {
   return new Promise((resolve) => window.setTimeout(resolve, delay));
 }
 
+function getBodyRootContainer(targetDocument) {
+  const ignoredTags = new Set(['SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'TEMPLATE']);
+  return Array.from(targetDocument.body?.children || []).find(
+    (element) => !ignoredTags.has(element.tagName)
+  );
+}
+
 function getExportTargets(targetDocument) {
   const explicitTargets = Array.from(targetDocument.querySelectorAll('[data-pptx-export-target="true"]'));
   if (explicitTargets.length) return explicitTargets;
@@ -49,12 +56,12 @@ function getExportTargets(targetDocument) {
   const slides = Array.from(targetDocument.querySelectorAll('.slide'));
   if (slides.length) return slides;
 
-  return [
-    targetDocument.querySelector('#slide') ||
-      targetDocument.querySelector('.slide-container') ||
-      targetDocument.body ||
-      targetDocument.documentElement
-  ].filter(Boolean);
+  for (const selector of ['#slide', '.slide-container', '.ppt-slide']) {
+    const targets = Array.from(targetDocument.querySelectorAll(selector));
+    if (targets.length) return targets;
+  }
+
+  return [getBodyRootContainer(targetDocument)].filter(Boolean);
 }
 
 function cleanTextForPpt(node) {

@@ -37,13 +37,21 @@ function getPrimaryFontFace(style) {
   return style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
 }
 
-export function isFontAwesomeStyle(style) {
-  return /font awesome/i.test(style?.fontFamily || '');
+export function isCommonFontStyle(style) {
+  const primary = getPrimaryFontFace(style).toLowerCase();
+  return COMMON_FONT_FACES.has(primary);
 }
 
 export function normalizeFontFaceForPpt(style) {
   const primary = getPrimaryFontFace(style);
-  return COMMON_FONT_FACES.has(primary.toLowerCase()) ? primary : FALLBACK_FONT_FACE;
+  return isCommonFontStyle(style) ? primary : FALLBACK_FONT_FACE;
+}
+
+export function shouldSkipTextForPpt(text, style) {
+  // Icon fonts usually expose icons as Private Use Area characters. Once an
+  // uncommon icon font is intentionally degraded to Noto Sans SC, those code
+  // points become tofu/garbled text, so omit them instead of exporting noise.
+  return !isCommonFontStyle(style) && /[\uE000-\uF8FF]/.test(text || '');
 }
 export function getTextStyle(style, scale, includeMargins = true, inheritedOpacity = 1) {
   let colorObj = parseColor(style.color, style);
@@ -234,6 +242,7 @@ export function collectTextParts(
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
       if (cleanContent.trim()) {
+        if (shouldSkipTextForPpt(cleanContent, beforeStyle)) return;
         const textOpts = getTextStyle(beforeStyle, scale, false, inheritedOpacity);
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
@@ -271,6 +280,7 @@ export function collectTextParts(
       if (val) {
         // Use parent style if child is text node, otherwise current style
         const styleToUse = node.nodeType === 1 ? getComputedStyleForNode(node) : parentStyle;
+        if (shouldSkipTextForPpt(val, styleToUse)) return;
         const transform = styleToUse.textTransform;
         if (transform === 'uppercase') val = val.toUpperCase();
         else if (transform === 'lowercase') val = val.toLowerCase();
@@ -340,6 +350,7 @@ export function collectTextParts(
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
       if (cleanContent.trim()) {
+        if (shouldSkipTextForPpt(cleanContent, afterStyle)) return;
         const textOpts = getTextStyle(afterStyle, scale, false, inheritedOpacity);
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
