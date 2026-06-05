@@ -1,0 +1,112 @@
+import { getComputedStyleForNode } from './dom-utils.js';
+import { getPrimaryFontFace, isPrivateUseText, normalizeFontFaceForPpt } from './text-style-utils.js';
+
+export function getUsedFontFamilies(root) {
+  const families = new Set();
+
+  function scan(node) {
+    if (node.nodeType === 1) {
+      // Element
+      const style = getComputedStyleForNode(node);
+      const primary = normalizeFontFaceForPpt(style);
+      if (primary) families.add(primary);
+      for (const pseudoElement of ['::before', '::after']) {
+        const pseudoStyle = getComputedStyleForNode(node, pseudoElement);
+        const content = pseudoStyle.content;
+        if (!content || content === 'none' || content === 'normal' || content === '""') continue;
+        const cleanContent = content.replace(/^['"]|['"]$/g, '');
+        if (isPrivateUseText(cleanContent)) {
+          const iconFont = getPrimaryFontFace(pseudoStyle);
+          if (iconFont) families.add(iconFont);
+        }
+      }
+    }
+    for (const child of node.childNodes) {
+      scan(child);
+    }
+  }
+
+  // Handle array of roots or single root
+  const elements = Array.isArray(root) ? root : [root];
+  elements.forEach((el) => {
+    const node = typeof el === 'string' ? document.querySelector(el) : el;
+    if (node) scan(node);
+  });
+
+  return families;
+}
+
+/**
+ * Scans document.styleSheets to find @font-face URLs for the requested families.
+ * Returns an array of { name, url } objects.
+ */
+export async function getAutoDetectedFonts(usedFamilies) {
+  const foundFonts = [];
+  const processedUrls = new Set();
+
+  // Helper to extract clean URL from CSS src string
+  const extractUrl = (srcStr) => {
+    // Look for url("...") or url('...') or url(...)
+    // Prioritize woff, ttf, otf. Avoid woff2 if possible as handling is harder,
+    // but if it's the only one, take it (convert logic handles it best effort).
+    const matches = srcStr.match(/url\((['"]?)(.*?)\1\)/g);
+    if (!matches) return null;
+
+    // Filter for preferred formats
+    let chosenUrl = null;
+    for (const match of matches) {
+      const urlRaw = match.replace(/url\((['"]?)(.*?)\1\)/, '$2');
+      // Skip data URIs for now (unless you want to support base64 embedding)
+      if (urlRaw.startsWith('data:')) continue;
+
+      if (urlRaw.includes('.ttf') || urlRaw.includes('.otf') || urlRaw.includes('.woff')) {
+        chosenUrl = urlRaw;
+        break; // Found a good one
+      }
+      // Fallback
+      if (!chosenUrl) chosenUrl = urlRaw;
+    }
+    return chosenUrl;
+  };
+
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      // Accessing cssRules on cross-origin sheets (like Google Fonts) might fail
+      // if CORS headers aren't set. We wrap in try/catch.
+      const rules = sheet.cssRules || sheet.rules;
+      if (!rules) continue;
+
+      for (const rule of Array.from(rules)) {
+        if (rule.constructor.name === 'CSSFontFaceRule' || rule.type === 5) {
+          const familyName = rule.style.getPropertyValue('font-family').replace(/['"]/g, '').trim();
+          const pptFontName = normalizeFontFaceForPpt(rule.style);
+
+          const isExplicitlyUsedFont = usedFamilies.has(familyName);
+          const isNormalizedFont = usedFamilies.has(pptFontName);
+
+          // Embed common/fallback fonts and preserve explicitly used private-use
+          // icon fonts so glyph icons can render without raster screenshots.
+          if (!isExplicitlyUsedFont && !isNormalizedFont) continue;
+          if (!isExplicitlyUsedFont && pptFontName.toLowerCase() !== familyName.toLowerCase()) continue;
+
+          if (isExplicitlyUsedFont || isNormalizedFont) {
+            const src = rule.style.getPropertyValue('src');
+            const url = extractUrl(src);
+
+            if (url && !processedUrls.has(url)) {
+              processedUrls.add(url);
+              foundFonts.push({ name: isExplicitlyUsedFont ? familyName : pptFontName, url: url });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // SecurityError is common for external stylesheets (CORS).
+      // We cannot scan those automatically via CSSOM.
+      console.warn('error:', e);
+      console.warn('Cannot scan stylesheet for fonts (CORS restriction):', sheet.href);
+    }
+  }
+
+  return foundFonts;
+}
