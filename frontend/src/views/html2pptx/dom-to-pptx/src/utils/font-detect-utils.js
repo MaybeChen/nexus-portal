@@ -1,5 +1,5 @@
 import { getComputedStyleForNode } from './dom-utils.js';
-import { normalizeFontFaceForPpt } from './text-style-utils.js';
+import { getPrimaryFontFace, isPrivateUseText, normalizeFontFaceForPpt } from './text-style-utils.js';
 
 export function getUsedFontFamilies(root) {
   const families = new Set();
@@ -10,6 +10,16 @@ export function getUsedFontFamilies(root) {
       const style = getComputedStyleForNode(node);
       const primary = normalizeFontFaceForPpt(style);
       if (primary) families.add(primary);
+      for (const pseudoElement of ['::before', '::after']) {
+        const pseudoStyle = getComputedStyleForNode(node, pseudoElement);
+        const content = pseudoStyle.content;
+        if (!content || content === 'none' || content === 'normal' || content === '""') continue;
+        const cleanContent = content.replace(/^['"]|['"]$/g, '');
+        if (isPrivateUseText(cleanContent)) {
+          const iconFont = getPrimaryFontFace(pseudoStyle);
+          if (iconFont) families.add(iconFont);
+        }
+      }
     }
     for (const child of node.childNodes) {
       scan(child);
@@ -71,17 +81,21 @@ export async function getAutoDetectedFonts(usedFamilies) {
           const familyName = rule.style.getPropertyValue('font-family').replace(/['"]/g, '').trim();
           const pptFontName = normalizeFontFaceForPpt(rule.style);
 
-          // Only embed explicitly allowed/common font faces. Uncommon web/icon
-          // fonts are intentionally rendered as the fallback Noto Sans SC.
-          if (pptFontName.toLowerCase() !== familyName.toLowerCase()) continue;
+          const isExplicitlyUsedFont = usedFamilies.has(familyName);
+          const isNormalizedFont = usedFamilies.has(pptFontName);
 
-          if (usedFamilies.has(familyName) || usedFamilies.has(pptFontName)) {
+          // Embed common/fallback fonts and preserve explicitly used private-use
+          // icon fonts so glyph icons can render without raster screenshots.
+          if (!isExplicitlyUsedFont && !isNormalizedFont) continue;
+          if (!isExplicitlyUsedFont && pptFontName.toLowerCase() !== familyName.toLowerCase()) continue;
+
+          if (isExplicitlyUsedFont || isNormalizedFont) {
             const src = rule.style.getPropertyValue('src');
             const url = extractUrl(src);
 
             if (url && !processedUrls.has(url)) {
               processedUrls.add(url);
-              foundFonts.push({ name: pptFontName, url: url });
+              foundFonts.push({ name: isExplicitlyUsedFont ? familyName : pptFontName, url: url });
             }
           }
         }

@@ -33,7 +33,7 @@ const COMMON_FONT_FACES = new Set([
   'verdana',
 ]);
 
-function getPrimaryFontFace(style) {
+export function getPrimaryFontFace(style) {
   return style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
 }
 
@@ -42,18 +42,22 @@ export function isCommonFontStyle(style) {
   return COMMON_FONT_FACES.has(primary);
 }
 
-export function normalizeFontFaceForPpt(style) {
+export function normalizeFontFaceForPpt(style, { preserveFontFace = false } = {}) {
   const primary = getPrimaryFontFace(style);
-  return isCommonFontStyle(style) ? primary : FALLBACK_FONT_FACE;
+  return preserveFontFace || isCommonFontStyle(style) ? primary : FALLBACK_FONT_FACE;
 }
 
-export function shouldSkipTextForPpt(text, style) {
-  // Icon fonts usually expose icons as Private Use Area characters. Once an
-  // uncommon icon font is intentionally degraded to Noto Sans SC, those code
-  // points become tofu/garbled text, so omit them instead of exporting noise.
-  return !isCommonFontStyle(style) && /[\uE000-\uF8FF]/.test(text || '');
+export function isPrivateUseText(text) {
+  return /[\uE000-\uF8FF]/.test(text || '');
 }
-export function getTextStyle(style, scale, includeMargins = true, inheritedOpacity = 1) {
+
+export function getTextStyle(
+  style,
+  scale,
+  includeMargins = true,
+  inheritedOpacity = 1,
+  { preserveFontFace = false } = {}
+) {
   let colorObj = parseColor(style.color, style);
   let opacity = colorObj.opacity * inheritedOpacity;
 
@@ -108,7 +112,7 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
   return {
     color: colorObj.hex || '000000',
     ...(transparency > 0 && { transparency }),
-    fontFace: normalizeFontFaceForPpt(style),
+    fontFace: normalizeFontFaceForPpt(style, { preserveFontFace }),
     fontSize: fontSizePx * 0.75 * scale,
     bold: parseInt(style.fontWeight) >= 600,
     italic: style.fontStyle === 'italic',
@@ -241,8 +245,11 @@ export function collectTextParts(
     if (content && content !== 'none' && content !== 'normal' && content !== '""') {
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
-      if (cleanContent.trim() && !shouldSkipTextForPpt(cleanContent, beforeStyle)) {
-        const textOpts = getTextStyle(beforeStyle, scale, false, inheritedOpacity);
+      if (cleanContent.trim()) {
+        const preserveFontFace = isPrivateUseText(cleanContent);
+        const textOpts = getTextStyle(beforeStyle, scale, false, inheritedOpacity, {
+          preserveFontFace,
+        });
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
         // Apply __spc_ suffix if charSpacing is defined
@@ -279,13 +286,15 @@ export function collectTextParts(
       if (val) {
         // Use parent style if child is text node, otherwise current style
         const styleToUse = node.nodeType === 1 ? getComputedStyleForNode(node) : parentStyle;
-        if (shouldSkipTextForPpt(val, styleToUse)) return;
+        const preserveFontFace = isPrivateUseText(val);
         const transform = styleToUse.textTransform;
         if (transform === 'uppercase') val = val.toUpperCase();
         else if (transform === 'lowercase') val = val.toLowerCase();
         else if (transform === 'capitalize') val = val.replace(/\b\w/g, (c) => c.toUpperCase());
 
-        const textOpts = getTextStyle(styleToUse, scale, !isRoot, inheritedOpacity);
+        const textOpts = getTextStyle(styleToUse, scale, !isRoot, inheritedOpacity, {
+          preserveFontFace,
+        });
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
         // Apply __spc_ suffix if charSpacing is defined
@@ -348,8 +357,11 @@ export function collectTextParts(
     if (content && content !== 'none' && content !== 'normal' && content !== '""') {
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
-      if (cleanContent.trim() && !shouldSkipTextForPpt(cleanContent, afterStyle)) {
-        const textOpts = getTextStyle(afterStyle, scale, false, inheritedOpacity);
+      if (cleanContent.trim()) {
+        const preserveFontFace = isPrivateUseText(cleanContent);
+        const textOpts = getTextStyle(afterStyle, scale, false, inheritedOpacity, {
+          preserveFontFace,
+        });
         if (hyperlink) textOpts.hyperlink = hyperlink;
 
         // Apply __spc_ suffix if charSpacing is defined

@@ -1,4 +1,4 @@
-import { parseColor, getTextStyle, shouldSkipTextForPpt } from '../utils.js';
+import { parseColor, getTextStyle, isPrivateUseText } from '../utils.js';
 import { PX_TO_INCH } from '../constants.js';
 
 export function getPseudoElementRect(hostRect, pseudoStyle) {
@@ -99,7 +99,7 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
   const content = pseudoStyle.content;
   const rawHasContent = content && content !== 'none' && content !== 'normal' && content !== '""';
   const cleanText = rawHasContent ? content.replace(/^['"]|['"]$/g, '') : '';
-  const hasContent = rawHasContent && !shouldSkipTextForPpt(cleanText, pseudoStyle);
+  const hasContent = rawHasContent;
 
   const bgColor = parseColor(pseudoStyle.backgroundColor);
   const hasBg = bgColor.hex && bgColor.opacity > 0;
@@ -122,7 +122,9 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
   const isCircle = borderRadius >= Math.min(rect.width, rect.height) / 2 - 1;
 
   if (hasContent) {
-    const textOpts = getTextStyle(pseudoStyle, scale, false);
+    const textOpts = getTextStyle(pseudoStyle, scale, false, 1, {
+      preserveFontFace: isPrivateUseText(cleanText),
+    });
     const textOptions = {
       x,
       y,

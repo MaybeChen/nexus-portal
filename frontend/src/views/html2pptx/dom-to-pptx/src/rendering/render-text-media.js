@@ -61,6 +61,59 @@ export function prepareTextNode(node, config, domOrder, effectiveZIndex, globalO
   };
 }
 
+function getVisibleCellBorder(style, side, scale) {
+  const width = parseFloat(style[`border${side}Width`]) || 0;
+  const borderStyle = style[`border${side}Style`];
+  const color = parseColor(style[`border${side}Color`], style);
+  if (width <= 0 || borderStyle === 'none' || borderStyle === 'hidden' || !color.hex || color.opacity === 0) {
+    return null;
+  }
+  return { width: width * PX_TO_INCH * scale, color: color.hex, opacity: color.opacity };
+}
+
+function createTableBorderOverlayItems(node, context) {
+  const { config, parentSortKey, domOrder } = context;
+  const items = [];
+  const cells = Array.from(node.querySelectorAll('th,td'));
+  const sideDefs = [
+    { css: 'Top', edge: 'top' },
+    { css: 'Right', edge: 'right' },
+    { css: 'Bottom', edge: 'bottom' },
+    { css: 'Left', edge: 'left' },
+  ];
+
+  cells.forEach((cell) => {
+    const rect = cell.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const style = window.getComputedStyle(cell);
+    const x = config.offX + (rect.left - config.rootX) * PX_TO_INCH * config.scale;
+    const y = config.offY + (rect.top - config.rootY) * PX_TO_INCH * config.scale;
+    const w = rect.width * PX_TO_INCH * config.scale;
+    const h = rect.height * PX_TO_INCH * config.scale;
+
+    sideDefs.forEach(({ css, edge }) => {
+      const border = getVisibleCellBorder(style, css, config.scale);
+      if (!border) return;
+      const common = {
+        type: 'shape',
+        zIndex: parentSortKey.concat([0, 0]),
+        domOrder,
+        shapeType: 'rect',
+        options: {
+          fill: { color: border.color, transparency: (1 - border.opacity) * 100 },
+          line: null,
+        },
+      };
+      if (edge === 'top') items.push({ ...common, options: { ...common.options, x, y, w, h: border.width } });
+      if (edge === 'right') items.push({ ...common, options: { ...common.options, x: x + w - border.width, y, w: border.width, h } });
+      if (edge === 'bottom') items.push({ ...common, options: { ...common.options, x, y: y + h - border.width, w, h: border.width } });
+      if (edge === 'left') items.push({ ...common, options: { ...common.options, x, y, w: border.width, h } });
+    });
+  });
+
+  return items;
+}
+
 export function prepareTableItem(node, context) {
   const { config, parentSortKey, domOrder, x, y, unrotatedW, unrotatedH, widthPx, heightPx, style, pptx } = context;
   if (node.tagName !== 'TABLE') return null;
@@ -111,6 +164,7 @@ export function prepareTableItem(node, context) {
     });
   }
 
+  tableItems.push(...createTableBorderOverlayItems(node, context));
   return { items: tableItems, stopRecursion: true };
 }
 
