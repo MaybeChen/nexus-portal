@@ -1,5 +1,5 @@
 // src/font-utils.js
-import { Font } from 'fonteditor-core';
+import { Font, woff2 } from 'fonteditor-core';
 import pako from 'pako';
 
 /**
@@ -9,6 +9,10 @@ import pako from 'pako';
  * @param {ArrayBuffer} fontBuffer - The raw font data
  */
 export async function fontToEot(type, fontBuffer) {
+  if (type === 'woff2' && !woff2.isInited()) {
+    await woff2.init();
+  }
+
   const options = {
     type,
     hinting: true,
