@@ -277,6 +277,54 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
   const asyncTasks = []; // Queue for heavy operations (Images, Canvas)
   let domOrderCounter = 0;
 
+  function getStackingContextLevel(style) {
+    if (!style || style.zIndex === 'auto') return 0;
+    const parsedZ = parseInt(style.zIndex, 10);
+    return Number.isNaN(parsedZ) ? 0 : parsedZ;
+  }
+
+  function isFlexOrGridItem(node) {
+    const parent = node.parentElement;
+    if (!parent) return false;
+
+    const parentDisplay = window.getComputedStyle(parent).display;
+    return (
+      parentDisplay === 'flex' ||
+      parentDisplay === 'inline-flex' ||
+      parentDisplay === 'grid' ||
+      parentDisplay === 'inline-grid'
+    );
+  }
+
+  function createsStackingContext(style, node) {
+    if (node === root) return true;
+    if (!style) return false;
+
+    const positionedWithZIndex =
+      (style.position === 'relative' ||
+        style.position === 'absolute' ||
+        style.position === 'fixed' ||
+        style.position === 'sticky') &&
+      style.zIndex !== 'auto';
+    const opacity = parseFloat(style.opacity);
+    const hasOpacityStacking = !Number.isNaN(opacity) && opacity < 1;
+    const hasTransform = style.transform && style.transform !== 'none';
+    const hasFilter = style.filter && style.filter !== 'none';
+    const hasBlendMode = style.mixBlendMode && style.mixBlendMode !== 'normal';
+    const hasIsolation = style.isolation === 'isolate';
+    const flexOrGridItemWithZIndex = isFlexOrGridItem(node) && style.zIndex !== 'auto';
+
+    return (
+      positionedWithZIndex ||
+      hasOpacityStacking ||
+      hasTransform ||
+      hasFilter ||
+      hasBlendMode ||
+      hasIsolation ||
+      flexOrGridItemWithZIndex
+    );
+  }
+
   // Sync Traversal Function
   function collect(node, parentSortKey, parentOpacity = 1) {
     const order = domOrderCounter++;
@@ -301,14 +349,10 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
       ) {
         return;
       }
-      let zVal = 0;
-      if (nodeStyle.zIndex !== 'auto') {
-        const parsedZ = parseInt(nodeStyle.zIndex);
-        if (!isNaN(parsedZ)) {
-          zVal = parsedZ;
-        }
+
+      if (createsStackingContext(nodeStyle, node)) {
+        currentSortKey = parentSortKey.concat([getStackingContextLevel(nodeStyle), order]);
       }
-      currentSortKey = parentSortKey.concat([zVal, order]);
     }
 
     // Prepare the item. If it needs async work, it returns a 'job'
@@ -324,7 +368,12 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
 
     if (result) {
       if (result.items) {
-        // Push items immediately to queue (data might be missing but filled later)
+        // Push items immediately to queue (data might be missing but filled later).
+        // Keep the stacking-context key separate from each item's local paint phase
+        // so ordinary elements in the same context are ordered by DOM position.
+        result.items.forEach((item) => {
+          item.stackingKey = currentSortKey;
+        });
         renderQueue.push(...result.items);
       }
       if (result.job) {
@@ -356,6 +405,12 @@ async function processSlide(root, slide, pptx, globalOptions = {}) {
   );
 
   finalQueue.sort((a, b) => {
+    const stackingCompare = compareKeys(a.stackingKey || a.zIndex, b.stackingKey || b.zIndex);
+    if (stackingCompare !== 0) return stackingCompare;
+
+    const domOrderCompare = a.domOrder - b.domOrder;
+    if (domOrderCompare !== 0) return domOrderCompare;
+
     return compareKeys(a.zIndex, b.zIndex);
   });
 
