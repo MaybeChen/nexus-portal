@@ -19,6 +19,26 @@ const KNOWN_ASSET_MAPPINGS = [
   }
 ];
 
+const PUBLIC_ASSET_ROOT = 'assets/';
+const PUBLIC_ASSET_FILENAMES = new Set([
+  'all.min.css',
+  'echarts.min.js',
+  'fa-brands-400.woff2',
+  'fa-regular-400.woff2',
+  'fa-solid-900.woff2',
+  'fonts.css',
+  'NotoSansSC-Bold.otf',
+  'NotoSansSC-Bold.ttf',
+  'NotoSansSC-Light.otf',
+  'NotoSansSC-Light.ttf',
+  'NotoSansSC-Medium.otf',
+  'NotoSansSC-Medium.ttf',
+  'NotoSansSC-Regular.otf',
+  'NotoSansSC-Regular.ttf',
+  'tailwind.js',
+  'tex-svg.min.js'
+]);
+
 function normalizePath(path) {
   return String(path || '').replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
 }
@@ -40,6 +60,43 @@ function stripQueryAndHash(rawUrl) {
 
 function isExternalOrSpecialUrl(rawUrl) {
   return /^(data:|blob:|https?:|mailto:|tel:|#)/i.test(String(rawUrl || '').trim());
+}
+
+function isSpecialNonFetchUrl(rawUrl) {
+  return /^(data:|blob:|mailto:|tel:|#)/i.test(String(rawUrl || '').trim());
+}
+
+function getAssetFilename(rawUrl) {
+  const cleanUrl = stripQueryAndHash(rawUrl);
+  if (!cleanUrl || isSpecialNonFetchUrl(cleanUrl)) return '';
+
+  let pathname = cleanUrl;
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    try {
+      pathname = new URL(cleanUrl).pathname;
+    } catch {
+      pathname = cleanUrl;
+    }
+  }
+
+  const filename = normalizePath(pathname).split('/').filter(Boolean).pop() || '';
+
+  try {
+    return decodeURIComponent(filename);
+  } catch {
+    return filename;
+  }
+}
+
+function getPublicBaseUrl() {
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+}
+
+function resolvePublicAssetUrl(rawUrl) {
+  const filename = getAssetFilename(rawUrl);
+  if (!filename || !PUBLIC_ASSET_FILENAMES.has(filename)) return null;
+  return preserveQueryAndHash(rawUrl, `${getPublicBaseUrl()}${PUBLIC_ASSET_ROOT}${filename}`);
 }
 
 function getWorkspaceAsset(fileMap, assetPath) {
@@ -91,15 +148,14 @@ function preserveQueryAndHash(rawUrl, blobUrl) {
 
 function rewriteUrl(rawUrl, basePath, fileMap, warnings, label) {
   const assetPath = resolveRelativePath(basePath, rawUrl, fileMap);
-  if (!assetPath) return rawUrl;
+  const asset = assetPath ? getWorkspaceAsset(fileMap, assetPath) : null;
+  if (asset?.url) return preserveQueryAndHash(rawUrl, asset.url);
 
-  const asset = getWorkspaceAsset(fileMap, assetPath);
-  if (!asset?.url) {
-    warnings.add(`未找到${label}：${rawUrl}`);
-    return rawUrl;
-  }
+  const publicUrl = resolvePublicAssetUrl(rawUrl);
+  if (publicUrl) return publicUrl;
 
-  return preserveQueryAndHash(rawUrl, asset.url);
+  if (assetPath) warnings.add(`未找到${label}：${rawUrl}`);
+  return rawUrl;
 }
 
 function rewriteCssUrls(cssText, cssPath, fileMap, warnings) {
@@ -130,11 +186,15 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
 
     const rawUrl = link.getAttribute('href');
     const cssPath = resolveRelativePath(htmlPath, rawUrl, fileMap);
-    if (!cssPath) continue;
+    const asset = cssPath ? getWorkspaceAsset(fileMap, cssPath) : null;
 
-    const asset = getWorkspaceAsset(fileMap, cssPath);
     if (!asset?.file) {
-      warnings.add(`未找到样式表：${rawUrl}`);
+      const publicUrl = resolvePublicAssetUrl(rawUrl);
+      if (publicUrl) {
+        link.setAttribute('href', publicUrl);
+      } else if (cssPath) {
+        warnings.add(`未找到样式表：${rawUrl}`);
+      }
       continue;
     }
 

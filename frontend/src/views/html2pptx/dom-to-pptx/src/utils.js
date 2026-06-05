@@ -15,6 +15,32 @@ function getCtx() {
   return _ctx;
 }
 
+function getTableFill(style) {
+  let bg = parseColor(style.backgroundColor, style);
+  if (
+    (!bg.hex || bg.opacity === 0) &&
+    style.backgroundImage &&
+    style.backgroundImage !== 'none'
+  ) {
+    const fallback = getGradientFallbackColor(style.backgroundImage, style);
+    if (fallback) bg = parseColor(fallback, style);
+  }
+
+  return bg.hex && bg.opacity > 0 ? { color: bg.hex } : null;
+}
+
+function getPrimaryFontFace(style) {
+  return style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+}
+
+export function isFontAwesomeStyle(style) {
+  return /font awesome/i.test(style?.fontFamily || '');
+}
+
+function normalizeFontFaceForPpt(style) {
+  return getPrimaryFontFace(style);
+}
+
 function getTableBorder(style, side, scale) {
   const widthStr = style[`border${side}Width`];
   const styleStr = style[`border${side}Style`];
@@ -74,6 +100,8 @@ export function extractTableData(node, scale) {
   const trList = node.querySelectorAll('tr');
   trList.forEach((tr) => {
     const rowData = [];
+    const rowStyle = getComputedStyleForNode(tr);
+    const rowFill = getTableFill(rowStyle);
     const cellList = Array.from(tr.children).filter((c) => ['TD', 'TH'].includes(c.tagName));
 
     cellList.forEach((cell) => {
@@ -88,17 +116,9 @@ export function extractTableData(node, scale) {
       // A. Text Style
       const textStyle = getTextStyle(style, scale);
 
-      // B. Cell Background
-      let bg = parseColor(style.backgroundColor, style);
-      if (
-        (!bg.hex || bg.opacity === 0) &&
-        style.backgroundImage &&
-        style.backgroundImage !== 'none'
-      ) {
-        const fallback = getGradientFallbackColor(style.backgroundImage, style);
-        if (fallback) bg = parseColor(fallback, style);
-      }
-      const fill = bg.hex && bg.opacity > 0 ? { color: bg.hex } : null;
+      // B. Cell Background. PowerPoint cells do not inherit their row fill, so
+      // copy the <tr> background onto transparent <td>/<th> cells to match browser rendering.
+      const fill = getTableFill(style) || rowFill;
 
       // C. Alignment
       let align = 'left';
@@ -524,7 +544,7 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
   return {
     color: colorObj.hex || '000000',
     ...(transparency > 0 && { transparency }),
-    fontFace: style.fontFamily.split(',')[0].replace(/['"]/g, ''),
+    fontFace: normalizeFontFaceForPpt(style),
     fontSize: fontSizePx * 0.75 * scale,
     bold: parseInt(style.fontWeight) >= 600,
     italic: style.fontStyle === 'italic',
@@ -551,6 +571,7 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
 export function isTextContainer(node) {
   const hasText = node.textContent.trim().length > 0;
   if (!hasText) return false;
+  if (isFontAwesomeStyle(getComputedStyleForNode(node))) return false;
 
   const children = Array.from(node.children);
   if (children.length === 0) return true;
@@ -560,6 +581,8 @@ export function isTextContainer(node) {
     if (el.tagName.includes('-')) return false;
     // 2. Reject Explicit Images/SVGs
     if (el.tagName === 'IMG' || el.tagName === 'SVG') return false;
+
+    if (isFontAwesomeStyle(getComputedStyleForNode(el))) return false;
 
     if (el.tagName === 'I' || el.tagName === 'SPAN') {
       const cls = el.getAttribute('class') || '';
