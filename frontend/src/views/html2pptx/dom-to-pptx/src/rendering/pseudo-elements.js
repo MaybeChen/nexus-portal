@@ -109,7 +109,7 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
 
   if (!hasBg && !hasBorder && !hasContent) return null;
 
-  const rect = getPseudoElementRect(hostRect, pseudoStyle);
+  const rect = getPseudoElementRect(hostRect, pseudoStyle) || (hasContent ? hostRect : null);
   if (!rect) return null;
 
   const scale = config.scale;

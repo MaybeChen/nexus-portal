@@ -149,26 +149,11 @@ export function isTextContainer(node) {
     // 2. Reject Explicit Images/SVGs
     if (el.tagName === 'IMG' || el.tagName === 'SVG') return false;
 
-    if (el.tagName === 'I' || el.tagName === 'SPAN') {
-      const cls = el.getAttribute('class') || '';
-      if (
-        typeof cls === 'string' &&
-        (cls.includes('fa-') ||
-          cls.includes('fas') ||
-          cls.includes('far') ||
-          cls.includes('fab') ||
-          cls.includes('material-icons') ||
-          cls.includes('bi-') ||
-          cls.includes('icon'))
-      ) {
-        // Double-check: Must have pseudo-element content to be a CSS icon
-        const before = getComputedStyleForNode(el, '::before').content;
-        const after = getComputedStyleForNode(el, '::after').content;
-        const hasContent = (c) => c && c !== 'none' && c !== 'normal' && c !== '""';
-
-        if (hasContent(before) || hasContent(after)) return false;
-      }
-    }
+    // CSS icon spans/i are still inline text runs: collectTextParts() will
+    // extract their ::before/::after glyphs and preserve the icon font face for
+    // private-use code points. Treating them as non-text containers makes the
+    // standalone pseudo-element path depend on pseudo widths that are often
+    // reported as `auto`, causing icons to disappear.
 
     const style = getComputedStyleForNode(el);
     const display = style.display;
