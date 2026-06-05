@@ -1,11 +1,13 @@
 import { PX_TO_INCH } from './constants.js';
 import { prepareRenderItem } from './rendering/render-item.js';
 
-function compareKeys(keyA, keyB) {
-  const len = Math.max(keyA.length, keyB.length);
+function compareKeys(keyA = [], keyB = []) {
+  const safeKeyA = Array.isArray(keyA) ? keyA : [];
+  const safeKeyB = Array.isArray(keyB) ? keyB : [];
+  const len = Math.max(safeKeyA.length, safeKeyB.length);
   for (let i = 0; i < len; i++) {
-    const valA = keyA[i] !== undefined ? keyA[i] : 0;
-    const valB = keyB[i] !== undefined ? keyB[i] : 0;
+    const valA = safeKeyA[i] !== undefined ? safeKeyA[i] : 0;
+    const valB = safeKeyB[i] !== undefined ? safeKeyB[i] : 0;
     if (valA !== valB) return valA - valB;
   }
   return 0;
@@ -66,8 +68,8 @@ function addItemToSlide(slide, item, index) {
 
   if (item.type === 'shape') slide.addShape(item.shapeType, item.options);
   if (item.type === 'image') slide.addImage(item.options);
-  if (item.type === 'text') slide.addText(item.textParts, item.options);
-  if (item.type === 'table') {
+  if (item.type === 'text' && Array.isArray(item.textParts)) slide.addText(item.textParts, item.options);
+  if (item.type === 'table' && Array.isArray(item.tableData?.rows) && item.tableData.rows.length) {
     slide.addTable(item.tableData.rows, {
       x: item.options.x,
       y: item.options.y,

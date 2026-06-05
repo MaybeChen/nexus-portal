@@ -53,9 +53,6 @@ function getExportTargets(targetDocument) {
   const explicitTargets = Array.from(targetDocument.querySelectorAll('[data-pptx-export-target="true"]'));
   if (explicitTargets.length) return explicitTargets;
 
-  const slides = Array.from(targetDocument.querySelectorAll('.slide'));
-  if (slides.length) return slides;
-
   for (const selector of ['#slide', '.slide-container', '.ppt-slide']) {
     const targets = Array.from(targetDocument.querySelectorAll(selector));
     if (targets.length) return targets;
