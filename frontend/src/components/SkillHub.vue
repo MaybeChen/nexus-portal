@@ -115,6 +115,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
+import { reportBusinessEvent } from '@/request/service';
 import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import { usePortalStore } from '@/stores/portal';
@@ -145,6 +146,7 @@ const createSkillForm = reactive(initialCreateSkillForm());
 const downloadVisible = ref(false);
 const activeSkill = ref(null);
 const downloadingFileId = ref('');
+const downloadEventReported = ref(false);
 
 const hasUploadedPackage = computed(() => createSkillForm.files.length > 0);
 const isEditingSkill = computed(() => Boolean(editingSkillId.value));
@@ -168,6 +170,7 @@ const downloadFiles = computed(() => activeSkill.value?.files || []);
 const normalizeSkillList = (data) => (Array.isArray(data) ? data : []);
 const getSkillId = (skill = {}) => skill.id || skill._id || '';
 const getFileId = (file = {}) => file.id || file.fileId || '';
+const getSkillReportLogic = (skill = {}) => [getSkillId(skill), skill.title || '', skill.name || ''].join('|');
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
@@ -408,7 +411,19 @@ const handleDeleteSkill = async (skill) => {
 
 const openDownloadDialog = (skill) => {
   activeSkill.value = skill;
+  downloadEventReported.value = false;
   downloadVisible.value = true;
+};
+
+const reportSkillDownload = () => {
+  if (downloadEventReported.value) {
+    return;
+  }
+
+  downloadEventReported.value = true;
+  reportBusinessEvent('skill', getSkillReportLogic(activeSkill.value)).catch((error) => {
+    console.warn('技能下载事件上报失败', error);
+  });
 };
 
 const downloadFile = (file) => {
@@ -430,6 +445,7 @@ const downloadFile = (file) => {
       return;
     }
 
+    reportSkillDownload();
     ElMessage.success('文件下载已开始');
   });
 };
