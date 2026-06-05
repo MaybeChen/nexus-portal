@@ -475,13 +475,7 @@ async function elementToCanvasImage(node, widthPx, heightPx) {
           // Apply styles DIRECTLY to elements to ensure html2canvas picks them up
           // This avoids issues where <style> tags in onclone are ignored or delayed
 
-          // 1. Force FontAwesome Family on Icons
-          const icons = clonedNode.querySelectorAll('.fa, .fas, .far, .fab');
-          icons.forEach((icon) => {
-            icon.style.setProperty('font-family', 'FontAwesome', 'important');
-          });
-
-          // 2. Fix Image Display
+          // 1. Fix Image Display
           const images = clonedNode.querySelectorAll('img');
           images.forEach((img) => {
             img.style.setProperty('display', 'inline-block', 'important');
@@ -493,14 +487,12 @@ async function elementToCanvasImage(node, widthPx, heightPx) {
           // 4. Adjust alignment for Icons to prevent baseline clipping
           // (Applies to <i>, <span>, or standard icon classes)
           const tag = clonedNode.tagName;
-          if (tag === 'I' || tag === 'SPAN' || clonedNode.className.includes('fa-')) {
+          if (tag === 'I' || tag === 'SPAN') {
             // Flex center helps align the glyph exactly in the middle of the box
             // preventing top/bottom cropping due to line-height mismatches.
             clonedNode.style.display = 'inline-flex';
             clonedNode.style.justifyContent = 'center';
             clonedNode.style.alignItems = 'center';
-            clonedNode.style.setProperty('font-family', 'FontAwesome', 'important'); // Ensure root icon gets it too
-
             // Remove margins that might offset the capture
             clonedNode.style.margin = '0';
 
@@ -602,16 +594,12 @@ function isIconElement(node) {
     return true;
   }
 
-  // 2. Class-based Icons (FontAwesome, Bootstrap, Material symbols) on <i> or <span>
+  // 2. Class-based Icons (Bootstrap, Material symbols) on <i> or <span>
   if (tag === 'I' || tag === 'SPAN') {
     const cls = node.getAttribute('class') || '';
     if (
       typeof cls === 'string' &&
-      (cls.includes('fa-') ||
-        cls.includes('fas') ||
-        cls.includes('far') ||
-        cls.includes('fab') ||
-        cls.includes('bi-') ||
+      (cls.includes('bi-') ||
         cls.includes('material-icons') ||
         cls.includes('icon'))
     ) {
@@ -625,6 +613,21 @@ function isIconElement(node) {
   }
 
   return false;
+}
+
+function prepareElementImageItem(node, parentSortKey, domOrder, x, y, w, h, widthPx, heightPx, rotation) {
+  const item = {
+    type: 'image',
+    zIndex: parentSortKey.concat([0, -1]),
+    domOrder,
+    options: { x, y, w, h, rotate: rotation, data: null },
+  };
+  const job = async () => {
+    const pngData = await elementToCanvasImage(node, widthPx, heightPx);
+    if (pngData) item.options.data = pngData;
+    else item.skip = true;
+  };
+  return { items: [item], job, stopRecursion: true };
 }
 
 /**
@@ -1236,18 +1239,7 @@ function prepareRenderItem(
 
   // --- ASYNC JOB: Icons and Other Elements ---
   if (isIconElement(node)) {
-    const item = {
-      type: 'image',
-      zIndex: parentSortKey.concat([0, -1]),
-      domOrder,
-      options: { x, y, w, h, rotate: rotation, data: null },
-    };
-    const job = async () => {
-      const pngData = await elementToCanvasImage(node, widthPx, heightPx);
-      if (pngData) item.options.data = pngData;
-      else item.skip = true;
-    };
-    return { items: [item], job, stopRecursion: true };
+    return prepareElementImageItem(node, parentSortKey, domOrder, x, y, w, h, widthPx, heightPx, rotation);
   }
 
   // Radii logic

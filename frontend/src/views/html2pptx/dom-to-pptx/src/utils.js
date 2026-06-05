@@ -15,6 +15,50 @@ function getCtx() {
   return _ctx;
 }
 
+function getTableFill(style) {
+  let bg = parseColor(style.backgroundColor, style);
+  if (
+    (!bg.hex || bg.opacity === 0) &&
+    style.backgroundImage &&
+    style.backgroundImage !== 'none'
+  ) {
+    const fallback = getGradientFallbackColor(style.backgroundImage, style);
+    if (fallback) bg = parseColor(fallback, style);
+  }
+
+  return bg.hex && bg.opacity > 0 ? { color: bg.hex } : null;
+}
+
+const DEFAULT_FALLBACK_FONT = 'Noto Sans SC';
+const COMMON_PPT_FONT_FAMILIES = new Set([
+  DEFAULT_FALLBACK_FONT.toLowerCase(),
+  'arial',
+  'aptos',
+  'calibri',
+  'cambria',
+  'helvetica',
+  'times new roman',
+  'microsoft yahei',
+  '微软雅黑',
+  'simsun',
+  '宋体',
+  'pingfang sc',
+  'hiragino sans gb',
+  'sans-serif',
+  'serif',
+  'monospace',
+]);
+
+function getPrimaryFontFace(style) {
+  return style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+}
+
+function normalizeFontFaceForPpt(style) {
+  const fontFace = getPrimaryFontFace(style);
+  if (!fontFace) return DEFAULT_FALLBACK_FONT;
+  return COMMON_PPT_FONT_FAMILIES.has(fontFace.toLowerCase()) ? fontFace : DEFAULT_FALLBACK_FONT;
+}
+
 function getTableBorder(style, side, scale) {
   const widthStr = style[`border${side}Width`];
   const styleStr = style[`border${side}Style`];
@@ -74,6 +118,8 @@ export function extractTableData(node, scale) {
   const trList = node.querySelectorAll('tr');
   trList.forEach((tr) => {
     const rowData = [];
+    const rowStyle = getComputedStyleForNode(tr);
+    const rowFill = getTableFill(rowStyle);
     const cellList = Array.from(tr.children).filter((c) => ['TD', 'TH'].includes(c.tagName));
 
     cellList.forEach((cell) => {
@@ -88,17 +134,9 @@ export function extractTableData(node, scale) {
       // A. Text Style
       const textStyle = getTextStyle(style, scale);
 
-      // B. Cell Background
-      let bg = parseColor(style.backgroundColor, style);
-      if (
-        (!bg.hex || bg.opacity === 0) &&
-        style.backgroundImage &&
-        style.backgroundImage !== 'none'
-      ) {
-        const fallback = getGradientFallbackColor(style.backgroundImage, style);
-        if (fallback) bg = parseColor(fallback, style);
-      }
-      const fill = bg.hex && bg.opacity > 0 ? { color: bg.hex } : null;
+      // B. Cell Background. PowerPoint cells do not inherit their row fill, so
+      // copy the <tr> background onto transparent <td>/<th> cells to match browser rendering.
+      const fill = getTableFill(style) || rowFill;
 
       // C. Alignment
       let align = 'left';
@@ -524,7 +562,7 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
   return {
     color: colorObj.hex || '000000',
     ...(transparency > 0 && { transparency }),
-    fontFace: style.fontFamily.split(',')[0].replace(/['"]/g, ''),
+    fontFace: normalizeFontFaceForPpt(style),
     fontSize: fontSizePx * 0.75 * scale,
     bold: parseInt(style.fontWeight) >= 600,
     italic: style.fontStyle === 'italic',
@@ -561,17 +599,12 @@ export function isTextContainer(node) {
     // 2. Reject Explicit Images/SVGs
     if (el.tagName === 'IMG' || el.tagName === 'SVG') return false;
 
+
     if (el.tagName === 'I' || el.tagName === 'SPAN') {
       const cls = el.getAttribute('class') || '';
       if (
         typeof cls === 'string' &&
-        (cls.includes('fa-') ||
-          cls.includes('fas') ||
-          cls.includes('far') ||
-          cls.includes('fab') ||
-          cls.includes('material-icons') ||
-          cls.includes('bi-') ||
-          cls.includes('icon'))
+        (cls.includes('material-icons') || cls.includes('bi-') || cls.includes('icon'))
       ) {
         // Double-check: Must have pseudo-element content to be a CSS icon
         const before = getComputedStyleForNode(el, '::before').content;
@@ -1000,9 +1033,7 @@ export function getUsedFontFamilies(root) {
     if (node.nodeType === 1) {
       // Element
       const style = getComputedStyleForNode(node);
-      const fontList = style.fontFamily.split(',');
-      // The first font in the stack is the primary one
-      const primary = fontList[0].trim().replace(/['"]/g, '');
+      const primary = normalizeFontFaceForPpt(style);
       if (primary) families.add(primary);
     }
     for (const child of node.childNodes) {
