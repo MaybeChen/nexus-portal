@@ -1,5 +1,37 @@
 import { getComputedStyleForNode } from './dom-utils.js';
-import { parseColor } from './color-utils.js';
+import { parseColor, getGradientFallbackColor } from './color-utils.js';
+
+const FALLBACK_FONT_FACE = 'Noto Sans SC';
+const COMMON_FONT_FACES = new Set([
+  'arial',
+  'arial black',
+  'calibri',
+  'cambria',
+  'candara',
+  'comic sans ms',
+  'consolas',
+  'courier new',
+  'georgia',
+  'helvetica',
+  'impact',
+  'lucida console',
+  'lucida sans unicode',
+  'microsoft yahei',
+  'microsoft jhenghei',
+  'noto sans',
+  'noto sans cjk sc',
+  'noto sans sc',
+  'pingfang sc',
+  'roboto',
+  'segoe ui',
+  'simhei',
+  'simsun',
+  'source han sans sc',
+  'tahoma',
+  'times new roman',
+  'trebuchet ms',
+  'verdana',
+]);
 
 function getPrimaryFontFace(style) {
   return style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
@@ -9,8 +41,9 @@ export function isFontAwesomeStyle(style) {
   return /font awesome/i.test(style?.fontFamily || '');
 }
 
-function normalizeFontFaceForPpt(style) {
-  return getPrimaryFontFace(style);
+export function normalizeFontFaceForPpt(style) {
+  const primary = getPrimaryFontFace(style);
+  return COMMON_FONT_FACES.has(primary.toLowerCase()) ? primary : FALLBACK_FONT_FACE;
 }
 export function getTextStyle(style, scale, includeMargins = true, inheritedOpacity = 1) {
   let colorObj = parseColor(style.color, style);
@@ -89,13 +122,12 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
 
 /**
  * Determines if a given DOM node is primarily a text container.
- * Updated to correctly reject Icon elements so they are rendered as images.
+ * Font icon spans are allowed to fall through to text/pseudo-element rendering
+ * instead of being rasterized via html2canvas.
  */
 export function isTextContainer(node) {
   const hasText = node.textContent.trim().length > 0;
   if (!hasText) return false;
-  if (isFontAwesomeStyle(getComputedStyleForNode(node))) return false;
-
   const children = Array.from(node.children);
   if (children.length === 0) return true;
 
@@ -104,8 +136,6 @@ export function isTextContainer(node) {
     if (el.tagName.includes('-')) return false;
     // 2. Reject Explicit Images/SVGs
     if (el.tagName === 'IMG' || el.tagName === 'SVG') return false;
-
-    if (isFontAwesomeStyle(getComputedStyleForNode(el))) return false;
 
     if (el.tagName === 'I' || el.tagName === 'SPAN') {
       const cls = el.getAttribute('class') || '';

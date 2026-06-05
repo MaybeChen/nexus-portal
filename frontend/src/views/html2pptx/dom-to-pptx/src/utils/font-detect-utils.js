@@ -1,3 +1,6 @@
+import { getComputedStyleForNode } from './dom-utils.js';
+import { normalizeFontFaceForPpt } from './text-style-utils.js';
+
 export function getUsedFontFamilies(root) {
   const families = new Set();
 
@@ -5,9 +8,7 @@ export function getUsedFontFamilies(root) {
     if (node.nodeType === 1) {
       // Element
       const style = getComputedStyleForNode(node);
-      const fontList = style.fontFamily.split(',');
-      // The first font in the stack is the primary one
-      const primary = fontList[0].trim().replace(/['"]/g, '');
+      const primary = normalizeFontFaceForPpt(style);
       if (primary) families.add(primary);
     }
     for (const child of node.childNodes) {
@@ -69,6 +70,10 @@ export async function getAutoDetectedFonts(usedFamilies) {
         if (rule.constructor.name === 'CSSFontFaceRule' || rule.type === 5) {
           const familyName = rule.style.getPropertyValue('font-family').replace(/['"]/g, '').trim();
           const pptFontName = normalizeFontFaceForPpt(rule.style);
+
+          // Only embed explicitly allowed/common font faces. Uncommon web/icon
+          // fonts are intentionally rendered as the fallback Noto Sans SC.
+          if (pptFontName.toLowerCase() !== familyName.toLowerCase()) continue;
 
           if (usedFamilies.has(familyName) || usedFamilies.has(pptFontName)) {
             const src = rule.style.getPropertyValue('src');

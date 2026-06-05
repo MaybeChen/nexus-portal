@@ -8,7 +8,6 @@ import {
   svgToSvg,
   collectTextParts,
   getPadding,
-  isFontAwesomeStyle,
 } from '../utils.js';
 import { getProcessedImage } from '../image-processor.js';
 import { PX_TO_INCH } from '../constants.js';
@@ -27,8 +26,6 @@ export function prepareTextNode(node, config, domOrder, effectiveZIndex, globalO
   range.detach();
 
   const style = window.getComputedStyle(parent);
-  if (isFontAwesomeStyle(style)) return null;
-
   const widthPx = rect.width;
   const heightPx = rect.height;
   const unrotatedW = widthPx * PX_TO_INCH * config.scale;

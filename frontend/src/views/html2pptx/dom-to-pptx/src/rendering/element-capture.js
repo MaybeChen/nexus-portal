@@ -123,49 +123,9 @@ export function isIconElement(node) {
       'ION-ICON',
       'EVA-ICON',
       'BOX-ICON',
-      'FA-ICON',
     ].includes(tag)
   ) {
     return true;
-  }
-
-  if (tag === 'I' || tag === 'SPAN') {
-    const cls = node.getAttribute('class') || '';
-    if (
-      typeof cls === 'string' &&
-      (cls.includes('fa-') ||
-        cls.includes('fas') ||
-        cls.includes('far') ||
-        cls.includes('fab') ||
-        cls.includes('bi-') ||
-        cls.includes('material-icons') ||
-        cls.includes('icon'))
-    ) {
-      const before = window.getComputedStyle(node, '::before').content;
-      const after = window.getComputedStyle(node, '::after').content;
-      const hasContent = (c) => c && c !== 'none' && c !== 'normal' && c !== '""';
-
-      if (hasContent(before) || hasContent(after)) return true;
-    }
-  }
-
-  return false;
-}
-
-export function hasFontAwesomeContent(node) {
-  if (node.nodeType !== 1) return false;
-
-  const stack = [node];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (isFontAwesomeStyle(window.getComputedStyle(current))) return true;
-    if (isFontAwesomeStyle(window.getComputedStyle(current, '::before'))) return true;
-    if (isFontAwesomeStyle(window.getComputedStyle(current, '::after'))) return true;
-    if (isIconElement(current)) return true;
-
-    for (let i = 0; i < current.children.length; i++) {
-      stack.push(current.children[i]);
-    }
   }
 
   return false;

@@ -1,3 +1,6 @@
+import { getComputedStyleForNode } from './dom-utils.js';
+import { parseColor } from './color-utils.js';
+
 export function svgToPng(node) {
   return new Promise((resolve) => {
     const clone = node.cloneNode(true);

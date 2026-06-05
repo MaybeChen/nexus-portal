@@ -11,7 +11,6 @@ import {
   generateCompositeBorderSVG,
   isClippedByParent,
   generateCustomShapeSVG,
-  isFontAwesomeStyle,
 } from '../utils.js';
 import { getProcessedImage } from '../image-processor.js';
 import { PX_TO_INCH } from '../constants.js';
@@ -19,7 +18,6 @@ import { getCustomShapeType } from './shape-utils.js';
 import {
   prepareElementImageItem,
   isIconElement,
-  hasFontAwesomeContent,
   elementToCanvasImage,
 } from './element-capture.js';
 import { preparePseudoElementItem } from './pseudo-elements.js';
@@ -400,13 +398,6 @@ export function prepareRenderItem(node, config, domOrder, pptx, effectiveZIndex,
   const items = [];
   const customShapeName = style.getPropertyValue('--shape') || style.getPropertyValue('--shape-type') || style.getPropertyValue('--pptx-shape');
   const baseContext = { node, config, domOrder, pptx, parentSortKey, style, rect, ...metrics, rotation: metrics.rotation };
-
-  if (node.tagName === 'TABLE' && hasFontAwesomeContent(node)) {
-    return prepareElementImageItem(node, parentSortKey, domOrder, metrics.x, metrics.y, metrics.w, metrics.h, metrics.widthPx, metrics.heightPx, metrics.rotation);
-  }
-  if (node.tagName !== 'TABLE' && isFontAwesomeStyle(style)) {
-    return prepareElementImageItem(node, parentSortKey, domOrder, metrics.x, metrics.y, metrics.w, metrics.h, metrics.widthPx, metrics.heightPx, metrics.rotation);
-  }
 
   const specialItem =
     prepareTableItem(node, { ...baseContext, unrotatedW: metrics.w, unrotatedH: metrics.h }) ||
