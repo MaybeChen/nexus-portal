@@ -94,7 +94,7 @@ async function embedFontsInPptx(pptx, fontsToEmbed, options) {
       const buffer = await response.arrayBuffer();
       const ext = fontCfg.url.split('.').pop().split(/[?#]/)[0].toLowerCase();
       let type = 'ttf';
-      if (['woff', 'otf'].includes(ext)) type = ext;
+      if (['woff', 'woff2', 'otf'].includes(ext)) type = ext;
       await embedder.addFont(fontCfg.name, buffer, type);
     } catch (e) {
       console.warn(`Failed to embed font: ${fontCfg.name} (${fontCfg.url})`, e);

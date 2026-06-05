@@ -14,7 +14,7 @@ export function getUsedFontFamilies(root) {
         const pseudoStyle = getComputedStyleForNode(node, pseudoElement);
         const content = pseudoStyle.content;
         if (!content || content === 'none' || content === 'normal' || content === '""') continue;
-        const cleanContent = content.replace(/^['"]|['"]$/g, '');
+        const cleanContent = content.replace(/^["']|["']$/g, '');
         if (isPrivateUseText(cleanContent)) {
           const iconFont = getPrimaryFontFace(pseudoStyle);
           if (iconFont) families.add(iconFont);
@@ -36,6 +36,94 @@ export function getUsedFontFamilies(root) {
   return families;
 }
 
+function extractUrl(srcStr) {
+  const matches = srcStr.match(/url\((["']?)(.*?)\1\)/g);
+  if (!matches) return null;
+
+  let chosenUrl = null;
+  for (const match of matches) {
+    const urlRaw = match.replace(/url\((["']?)(.*?)\1\)/, '$2');
+    if (urlRaw.startsWith('data:')) continue;
+
+    if (urlRaw.includes('.ttf') || urlRaw.includes('.otf') || urlRaw.includes('.woff')) {
+      chosenUrl = urlRaw;
+      break;
+    }
+    if (!chosenUrl) chosenUrl = urlRaw;
+  }
+  return chosenUrl;
+}
+
+function resolveFontUrl(url, baseUrl) {
+  try {
+    return new URL(url, baseUrl || document.baseURI).href;
+  } catch (e) {
+    return url;
+  }
+}
+
+function shouldEmbedFontFamily(usedFamilies, familyName, pptFontName) {
+  const isExplicitlyUsedFont = usedFamilies.has(familyName);
+  const isNormalizedFont = usedFamilies.has(pptFontName);
+
+  if (!isExplicitlyUsedFont && !isNormalizedFont) return false;
+  if (!isExplicitlyUsedFont && pptFontName.toLowerCase() !== familyName.toLowerCase()) return false;
+  return true;
+}
+
+function addFontFace(foundFonts, processedUrls, usedFamilies, familyName, src, baseUrl) {
+  if (!familyName || !src) return;
+
+  const styleLike = { fontFamily: familyName };
+  const pptFontName = normalizeFontFaceForPpt(styleLike);
+  if (!shouldEmbedFontFamily(usedFamilies, familyName, pptFontName)) return;
+
+  const url = extractUrl(src);
+  if (!url) return;
+
+  const resolvedUrl = resolveFontUrl(url, baseUrl);
+  if (processedUrls.has(resolvedUrl)) return;
+
+  processedUrls.add(resolvedUrl);
+  foundFonts.push({ name: usedFamilies.has(familyName) ? familyName : pptFontName, url: resolvedUrl });
+}
+
+function scanFontFaceRules(rules, foundFonts, processedUrls, usedFamilies, baseUrl) {
+  if (!rules) return;
+
+  for (const rule of Array.from(rules)) {
+    if (rule.constructor.name !== 'CSSFontFaceRule' && rule.type !== 5) continue;
+
+    const familyName = rule.style.getPropertyValue('font-family').replace(/["']/g, '').trim();
+    const src = rule.style.getPropertyValue('src');
+    addFontFace(foundFonts, processedUrls, usedFamilies, familyName, src, baseUrl);
+  }
+}
+
+function scanFontFaceText(cssText, foundFonts, processedUrls, usedFamilies, baseUrl) {
+  const blocks = cssText.match(/@font-face\s*{[^}]*}/gi) || [];
+  for (const block of blocks) {
+    const familyMatch = block.match(/font-family\s*:\s*([^;]+);/i);
+    const srcMatch = block.match(/src\s*:\s*([^;]+);/i);
+    const familyName = familyMatch?.[1]?.replace(/["']/g, '').trim();
+    const src = srcMatch?.[1]?.trim();
+    addFontFace(foundFonts, processedUrls, usedFamilies, familyName, src, baseUrl);
+  }
+}
+
+async function scanStylesheetHref(sheet, foundFonts, processedUrls, usedFamilies) {
+  if (!sheet.href) return;
+
+  try {
+    const response = await fetch(sheet.href);
+    if (!response.ok) return;
+    const cssText = await response.text();
+    scanFontFaceText(cssText, foundFonts, processedUrls, usedFamilies, sheet.href);
+  } catch (e) {
+    console.warn('Cannot fetch stylesheet for font detection:', sheet.href, e);
+  }
+}
+
 /**
  * Scans document.styleSheets to find @font-face URLs for the requested families.
  * Returns an array of { name, url } objects.
@@ -44,67 +132,15 @@ export async function getAutoDetectedFonts(usedFamilies) {
   const foundFonts = [];
   const processedUrls = new Set();
 
-  // Helper to extract clean URL from CSS src string
-  const extractUrl = (srcStr) => {
-    // Look for url("...") or url('...') or url(...)
-    // Prioritize woff, ttf, otf. Avoid woff2 if possible as handling is harder,
-    // but if it's the only one, take it (convert logic handles it best effort).
-    const matches = srcStr.match(/url\((['"]?)(.*?)\1\)/g);
-    if (!matches) return null;
-
-    // Filter for preferred formats
-    let chosenUrl = null;
-    for (const match of matches) {
-      const urlRaw = match.replace(/url\((['"]?)(.*?)\1\)/, '$2');
-      // Skip data URIs for now (unless you want to support base64 embedding)
-      if (urlRaw.startsWith('data:')) continue;
-
-      if (urlRaw.includes('.ttf') || urlRaw.includes('.otf') || urlRaw.includes('.woff')) {
-        chosenUrl = urlRaw;
-        break; // Found a good one
-      }
-      // Fallback
-      if (!chosenUrl) chosenUrl = urlRaw;
-    }
-    return chosenUrl;
-  };
-
   for (const sheet of Array.from(document.styleSheets)) {
     try {
-      // Accessing cssRules on cross-origin sheets (like Google Fonts) might fail
-      // if CORS headers aren't set. We wrap in try/catch.
+      // Accessing cssRules on cross-origin sheets might fail if CORS headers
+      // are not set. Fall back to fetching the stylesheet text where possible.
       const rules = sheet.cssRules || sheet.rules;
-      if (!rules) continue;
-
-      for (const rule of Array.from(rules)) {
-        if (rule.constructor.name === 'CSSFontFaceRule' || rule.type === 5) {
-          const familyName = rule.style.getPropertyValue('font-family').replace(/['"]/g, '').trim();
-          const pptFontName = normalizeFontFaceForPpt(rule.style);
-
-          const isExplicitlyUsedFont = usedFamilies.has(familyName);
-          const isNormalizedFont = usedFamilies.has(pptFontName);
-
-          // Embed common/fallback fonts and preserve explicitly used private-use
-          // icon fonts so glyph icons can render without raster screenshots.
-          if (!isExplicitlyUsedFont && !isNormalizedFont) continue;
-          if (!isExplicitlyUsedFont && pptFontName.toLowerCase() !== familyName.toLowerCase()) continue;
-
-          if (isExplicitlyUsedFont || isNormalizedFont) {
-            const src = rule.style.getPropertyValue('src');
-            const url = extractUrl(src);
-
-            if (url && !processedUrls.has(url)) {
-              processedUrls.add(url);
-              foundFonts.push({ name: isExplicitlyUsedFont ? familyName : pptFontName, url: url });
-            }
-          }
-        }
-      }
+      scanFontFaceRules(rules, foundFonts, processedUrls, usedFamilies, sheet.href);
     } catch (e) {
-      // SecurityError is common for external stylesheets (CORS).
-      // We cannot scan those automatically via CSSOM.
-      console.warn('error:', e);
-      console.warn('Cannot scan stylesheet for fonts (CORS restriction):', sheet.href);
+      console.warn('Cannot scan stylesheet via CSSOM; trying fetch fallback:', sheet.href, e);
+      await scanStylesheetHref(sheet, foundFonts, processedUrls, usedFamilies);
     }
   }
 

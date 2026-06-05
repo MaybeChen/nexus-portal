@@ -1,4 +1,9 @@
 import html2canvas from 'html2canvas';
+
+function isIconFontStyle(style) {
+  return /font awesome|fontawesome|bootstrap-icons|material icons/i.test(style?.fontFamily || '');
+}
+
 export async function elementToCanvasImage(node, widthPx, heightPx) {
   return new Promise((resolve) => {
     const originalId = node.id;
@@ -22,6 +27,10 @@ export async function elementToCanvasImage(node, widthPx, heightPx) {
       onclone: (clonedDoc) => {
         const clonedNode = clonedDoc.getElementById(tempId);
         if (clonedNode) {
+          if (isIconFontStyle(style)) {
+            clonedNode.style.setProperty('font-family', style.fontFamily, 'important');
+          }
+
           const images = clonedNode.querySelectorAll('img');
           images.forEach((img) => {
             img.style.setProperty('display', 'inline-block', 'important');
@@ -34,6 +43,9 @@ export async function elementToCanvasImage(node, widthPx, heightPx) {
             clonedNode.style.display = 'inline-flex';
             clonedNode.style.justifyContent = 'center';
             clonedNode.style.alignItems = 'center';
+            if (isIconFontStyle(style)) {
+              clonedNode.style.setProperty('font-family', style.fontFamily, 'important');
+            }
             clonedNode.style.margin = '0';
             clonedNode.style.lineHeight = '1';
             clonedNode.style.verticalAlign = 'middle';
@@ -117,6 +129,25 @@ export function isIconElement(node) {
     ].includes(tag)
   ) {
     return true;
+  }
+
+  if (tag === 'I' || tag === 'SPAN') {
+    const cls = node.getAttribute('class') || '';
+    if (
+      typeof cls === 'string' &&
+      (cls.includes('fa-') ||
+        cls.includes('fas') ||
+        cls.includes('far') ||
+        cls.includes('fab') ||
+        cls.includes('bi-') ||
+        cls.includes('material-icons') ||
+        cls.includes('icon'))
+    ) {
+      const before = window.getComputedStyle(node, '::before').content;
+      const after = window.getComputedStyle(node, '::after').content;
+      const hasContent = (c) => c && c !== 'none' && c !== 'normal' && c !== '""';
+      if (hasContent(before) || hasContent(after)) return true;
+    }
   }
 
   return false;
