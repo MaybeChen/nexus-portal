@@ -33,16 +33,12 @@ function getPrimaryFontFace(style) {
   return style.fontFamily.split(',')[0].replace(/["']/g, '').trim();
 }
 
+export function isFontAwesomeStyle(style) {
+  return /font awesome/i.test(style?.fontFamily || '');
+}
+
 function normalizeFontFaceForPpt(style) {
-  const fontFace = getPrimaryFontFace(style);
-  const normalized = fontFace.toLowerCase();
-
-  if (normalized === 'font awesome 6 free') {
-    const weight = parseInt(style.fontWeight, 10) || 400;
-    return weight >= 600 ? 'Font Awesome 6 Free Solid' : 'Font Awesome 6 Free Regular';
-  }
-
-  return fontFace;
+  return getPrimaryFontFace(style);
 }
 
 function getTableBorder(style, side, scale) {
@@ -575,6 +571,7 @@ export function getTextStyle(style, scale, includeMargins = true, inheritedOpaci
 export function isTextContainer(node) {
   const hasText = node.textContent.trim().length > 0;
   if (!hasText) return false;
+  if (isFontAwesomeStyle(getComputedStyleForNode(node))) return false;
 
   const children = Array.from(node.children);
   if (children.length === 0) return true;
@@ -584,6 +581,8 @@ export function isTextContainer(node) {
     if (el.tagName.includes('-')) return false;
     // 2. Reject Explicit Images/SVGs
     if (el.tagName === 'IMG' || el.tagName === 'SVG') return false;
+
+    if (isFontAwesomeStyle(getComputedStyleForNode(el))) return false;
 
     if (el.tagName === 'I' || el.tagName === 'SPAN') {
       const cls = el.getAttribute('class') || '';

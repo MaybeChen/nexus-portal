@@ -29,6 +29,7 @@ import {
   getAutoDetectedFonts,
   extractTableData,
   collectTextParts,
+  isFontAwesomeStyle,
 } from './utils.js';
 import { getProcessedImage } from './image-processor.js';
 
@@ -475,11 +476,11 @@ async function elementToCanvasImage(node, widthPx, heightPx) {
           // Apply styles DIRECTLY to elements to ensure html2canvas picks them up
           // This avoids issues where <style> tags in onclone are ignored or delayed
 
-          // 1. Force FontAwesome Family on Icons
-          const icons = clonedNode.querySelectorAll('.fa, .fas, .far, .fab');
-          icons.forEach((icon) => {
-            icon.style.setProperty('font-family', 'FontAwesome', 'important');
-          });
+          // 1. Keep the browser-resolved Font Awesome family. Forcing the legacy
+          // "FontAwesome" family breaks Font Awesome 6, whose CSS family is custom.
+          if (isFontAwesomeStyle(style)) {
+            clonedNode.style.setProperty('font-family', style.fontFamily, 'important');
+          }
 
           // 2. Fix Image Display
           const images = clonedNode.querySelectorAll('img');
@@ -499,7 +500,9 @@ async function elementToCanvasImage(node, widthPx, heightPx) {
             clonedNode.style.display = 'inline-flex';
             clonedNode.style.justifyContent = 'center';
             clonedNode.style.alignItems = 'center';
-            clonedNode.style.setProperty('font-family', 'FontAwesome', 'important'); // Ensure root icon gets it too
+            if (isFontAwesomeStyle(style)) {
+              clonedNode.style.setProperty('font-family', style.fontFamily, 'important');
+            }
 
             // Remove margins that might offset the capture
             clonedNode.style.margin = '0';
@@ -625,6 +628,40 @@ function isIconElement(node) {
   }
 
   return false;
+}
+
+function hasFontAwesomeContent(node) {
+  if (node.nodeType !== 1) return false;
+
+  const stack = [node];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (isFontAwesomeStyle(window.getComputedStyle(current))) return true;
+    if (isFontAwesomeStyle(window.getComputedStyle(current, '::before'))) return true;
+    if (isFontAwesomeStyle(window.getComputedStyle(current, '::after'))) return true;
+    if (isIconElement(current)) return true;
+
+    for (let i = 0; i < current.children.length; i++) {
+      stack.push(current.children[i]);
+    }
+  }
+
+  return false;
+}
+
+function prepareElementImageItem(node, parentSortKey, domOrder, x, y, w, h, widthPx, heightPx, rotation) {
+  const item = {
+    type: 'image',
+    zIndex: parentSortKey.concat([0, -1]),
+    domOrder,
+    options: { x, y, w, h, rotate: rotation, data: null },
+  };
+  const job = async () => {
+    const pngData = await elementToCanvasImage(node, widthPx, heightPx);
+    if (pngData) item.options.data = pngData;
+    else item.skip = true;
+  };
+  return { items: [item], job, stopRecursion: true };
 }
 
 /**
@@ -839,6 +876,8 @@ function prepareRenderItem(
     range.detach();
 
     const style = window.getComputedStyle(parent);
+    if (isFontAwesomeStyle(style)) return null;
+
     const widthPx = rect.width;
     const heightPx = rect.height;
     const unrotatedW = widthPx * PX_TO_INCH * config.scale;
@@ -923,6 +962,14 @@ function prepareRenderItem(
     style.getPropertyValue('--shape') ||
     style.getPropertyValue('--shape-type') ||
     style.getPropertyValue('--pptx-shape');
+
+  if (node.tagName === 'TABLE' && hasFontAwesomeContent(node)) {
+    return prepareElementImageItem(node, parentSortKey, domOrder, x, y, w, h, widthPx, heightPx, rotation);
+  }
+
+  if (node.tagName !== 'TABLE' && isFontAwesomeStyle(style)) {
+    return prepareElementImageItem(node, parentSortKey, domOrder, x, y, w, h, widthPx, heightPx, rotation);
+  }
 
   if (node.tagName === 'TABLE') {
     const tableData = extractTableData(node, config.scale);
@@ -1236,18 +1283,7 @@ function prepareRenderItem(
 
   // --- ASYNC JOB: Icons and Other Elements ---
   if (isIconElement(node)) {
-    const item = {
-      type: 'image',
-      zIndex: parentSortKey.concat([0, -1]),
-      domOrder,
-      options: { x, y, w, h, rotate: rotation, data: null },
-    };
-    const job = async () => {
-      const pngData = await elementToCanvasImage(node, widthPx, heightPx);
-      if (pngData) item.options.data = pngData;
-      else item.skip = true;
-    };
-    return { items: [item], job, stopRecursion: true };
+    return prepareElementImageItem(node, parentSortKey, domOrder, x, y, w, h, widthPx, heightPx, rotation);
   }
 
   // Radii logic
