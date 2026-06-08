@@ -26,12 +26,12 @@
             </span>
           </div>
           <div class="skill-card__actions">
-            <el-button class="skill-card__download" plain round aria-label="下载" @click="openDownloadDialog(skill)">
+            <el-button class="skill-card__download" aria-label="下载" @click="openDownloadDialog(skill)">
               <img class="skill-card__download-icon skill-card__download-icon--normal" :src="downloadNormalIcon" alt="" aria-hidden="true" />
               <img class="skill-card__download-icon skill-card__download-icon--high" :src="downloadHighIcon" alt="" aria-hidden="true" />
             </el-button>
             <el-dropdown v-if="canManageSkill(skill)" trigger="click" placement="bottom-end">
-              <el-button class="skill-card__more" plain round aria-label="更多操作">
+              <el-button class="skill-card__more" aria-label="更多操作">
                 <img class="skill-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
               </el-button>
               <template #dropdown>

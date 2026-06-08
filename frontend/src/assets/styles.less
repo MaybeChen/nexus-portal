@@ -64,17 +64,10 @@ button {
 
 .portal-brand__mark {
   display: block;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at 26% 22%, #28d8ff 0 4px, transparent 5px),
-    radial-gradient(circle at 72% 26%, #2f7bff 0 4px, transparent 5px),
-    radial-gradient(circle at 50% 76%, #7b61ff 0 4px, transparent 5px),
-    linear-gradient(135deg, rgba(33, 199, 255, 0.12), rgba(95, 88, 255, 0.18));
-  border: 1px solid rgba(64, 117, 235, 0.18);
-  object-fit: cover;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 60px;
+  object-fit: contain;
 }
 
 .portal-brand strong {
@@ -455,6 +448,19 @@ button {
   position: relative;
   width: 38px;
   padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.skill-card__download:hover,
+.skill-card__download:focus,
+.skill-card__more:hover,
+.skill-card__more:focus {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .skill-card__download-icon,
