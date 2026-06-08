@@ -426,9 +426,16 @@ button {
 
 .skill-card__footer .skill-card__actions {
   flex: 0 0 auto;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 4px;
   margin-top: 0;
+  margin-left: auto;
   padding-top: 0;
+}
+
+.skill-card__footer .skill-card__actions .el-dropdown {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 
@@ -443,10 +450,11 @@ button {
   font-weight: 800;
 }
 
-.skill-card__download,
-.skill-card__more {
+.skill-card__footer .skill-card__download,
+.skill-card__footer .skill-card__more {
   position: relative;
-  width: 38px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -454,10 +462,10 @@ button {
   box-shadow: none;
 }
 
-.skill-card__download:hover,
-.skill-card__download:focus,
-.skill-card__more:hover,
-.skill-card__more:focus {
+.skill-card__footer .skill-card__download:hover,
+.skill-card__footer .skill-card__download:focus,
+.skill-card__footer .skill-card__more:hover,
+.skill-card__footer .skill-card__more:focus {
   border: 0;
   background: transparent;
   box-shadow: none;
