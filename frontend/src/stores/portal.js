@@ -10,9 +10,9 @@ export const usePortalStore = defineStore('portal', {
       avatar: 'HTP'
     },
     sections: [
-      { key: 'skillhub', title: 'Skill Hub', badge: '▱' },
-      { key: 'ai-tools', title: 'AI工具', badge: '▣' },
-      { key: 'model-store', title: '模型商店', badge: '▤' }
+      { key: 'skillhub', title: 'Skill Hub' },
+      { key: 'ai-tools', title: 'AI工具' },
+      { key: 'model-store', title: '模型商店' }
     ],
     skills: [],
     toolCategories: [
