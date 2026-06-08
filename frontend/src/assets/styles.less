@@ -64,17 +64,10 @@ button {
 
 .portal-brand__mark {
   display: block;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at 26% 22%, #28d8ff 0 4px, transparent 5px),
-    radial-gradient(circle at 72% 26%, #2f7bff 0 4px, transparent 5px),
-    radial-gradient(circle at 50% 76%, #7b61ff 0 4px, transparent 5px),
-    linear-gradient(135deg, rgba(33, 199, 255, 0.12), rgba(95, 88, 255, 0.18));
-  border: 1px solid rgba(64, 117, 235, 0.18);
-  object-fit: cover;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 60px;
+  object-fit: contain;
 }
 
 .portal-brand strong {
@@ -380,6 +373,47 @@ button {
 }
 
 
+.skill-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.skill-card__meta {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #8b95a7;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.skill-card__usage {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
+.skill-card__usage-icon {
+  color: #c8d0dd;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.skill-card__author {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .skill-card__actions,
 .tool-card__actions,
 .model-card__actions {
@@ -388,6 +422,20 @@ button {
   justify-content: flex-end;
   margin-top: auto;
   padding-top: 18px;
+}
+
+.skill-card__footer .skill-card__actions {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 0;
+  margin-left: auto;
+  padding-top: 0;
+}
+
+.skill-card__footer .skill-card__actions .el-dropdown {
+  display: inline-flex;
+  flex: 0 0 auto;
 }
 
 
@@ -402,11 +450,58 @@ button {
   font-weight: 800;
 }
 
+.skill-card__footer .skill-card__download,
+.skill-card__footer .skill-card__more {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.skill-card__footer .skill-card__download:hover,
+.skill-card__footer .skill-card__download:focus,
+.skill-card__footer .skill-card__more:hover,
+.skill-card__footer .skill-card__more:focus {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.skill-card__download-icon,
+.skill-card__more-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.skill-card__download-icon--high {
+  display: none;
+}
+
+.skill-card__download:hover .skill-card__download-icon--normal,
+.skill-card__download:focus .skill-card__download-icon--normal {
+  display: none;
+}
+
+.skill-card__download:hover .skill-card__download-icon--high,
+.skill-card__download:focus .skill-card__download-icon--high {
+  display: block;
+}
+
 
 .skill-card__actions .el-button + .el-button,
 .tool-card__actions .el-button + .el-button,
 .model-card__actions .el-button + .el-button {
   margin-left: 15px;
+}
+
+.skill-card__footer .skill-card__actions .el-button + .el-button {
+  margin-left: 0;
 }
 
 .model-card {
