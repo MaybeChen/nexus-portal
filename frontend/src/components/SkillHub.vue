@@ -36,7 +36,7 @@
 
     <el-empty v-if="!loadingSkills && portal.skills.length === 0" description="暂无技能资产" />
 
-    <el-dialog v-model="downloadVisible" :title="`${activeSkill?.title || activeSkill?.name || '技能'} 文件列表`" width="520px" align-center>
+    <el-dialog v-model="downloadVisible" :title="`${activeSkill?.title || activeSkill?.name || '技能'} 文件列表`" width="520px" append-to-body align-center>
       <div v-if="downloadFiles.length" class="download-file-list">
         <div
           v-for="file in downloadFiles"
@@ -54,7 +54,7 @@
       <el-empty v-else description="该技能暂无可下载文件" />
     </el-dialog>
 
-    <el-dialog v-model="createSkillVisible" :title="skillDialogTitle" width="560px" align-center @closed="resetCreateSkillForm">
+    <el-dialog v-model="createSkillVisible" :title="skillDialogTitle" width="560px" append-to-body align-center @closed="resetCreateSkillForm">
       <el-form class="create-skill-form" label-position="top">
         <el-form-item label="标题" required>
           <el-input v-model.trim="createSkillForm.title" placeholder="输入技能标题" />

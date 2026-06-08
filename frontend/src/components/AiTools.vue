@@ -36,7 +36,7 @@
 
     <el-empty v-if="!loadingTools && portal.tools.length === 0" description="暂无 AI 工具" />
 
-    <el-dialog v-model="toolDialogVisible" :title="toolDialogTitle" width="560px" align-center @closed="resetToolForm">
+    <el-dialog v-model="toolDialogVisible" :title="toolDialogTitle" width="560px" append-to-body align-center @closed="resetToolForm">
       <el-form class="create-tool-form" label-position="top">
         <el-form-item label="名称" required>
           <el-input v-model.trim="toolForm.title" placeholder="输入工具名称" />

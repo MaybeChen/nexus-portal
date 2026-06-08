@@ -44,7 +44,7 @@
 
     <el-empty v-if="!loadingModels && portal.models.length === 0" description="暂无模型资产" />
 
-    <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" align-center @closed="resetModelForm">
+    <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" append-to-body align-center @closed="resetModelForm">
       <el-form class="create-model-form" label-position="top">
         <el-form-item label="名称" required>
           <el-input v-model.trim="modelForm.title" placeholder="输入模型名称" />
