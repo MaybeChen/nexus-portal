@@ -1,10 +1,10 @@
 import { useUserStore } from '@/store';
 
 import { EVENT_UPLOAD, USER_INFO } from './constant';
-import { nexusGet, nexusPost } from './webservice';
+import { apiGet, apiPost } from './webservice';
 
 export const getUserInfo = () => {
-  return nexusGet(USER_INFO)
+  return apiGet(USER_INFO)
     .then((res) => {
       const userStore = useUserStore();
       userStore.setUserInfo(res);
@@ -16,5 +16,5 @@ export const getUserInfo = () => {
 export const GetUserInfo = getUserInfo;
 
 export const reportBusinessEvent = (type, logic) => {
-  return nexusPost(EVENT_UPLOAD, { type, logic });
+  return apiPost(EVENT_UPLOAD, { type, logic });
 };

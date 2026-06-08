@@ -2,10 +2,10 @@
   <div class="portal-shell">
     <header class="portal-header">
       <div class="portal-brand">
-        <img class="portal-brand__mark" :src="placeholderImage" alt="网页 logo 占位" />
+        <img class="portal-brand__mark" :src="headerLogo" alt="GTS 智能化装备库 logo" />
         <div>
-          <strong>GTS技术规划与标准专利部-智能化武装库部司</strong>
-          <small>算法为刃，智械为盾。</small>
+          <strong>GTS技术规划与标准专利部-智能化装备库</strong>
+          <small>量身定制专属AI装备库实现部门办公效率倍增</small>
         </div>
       </div>
 
@@ -18,7 +18,11 @@
     <aside class="portal-sidebar">
       <el-menu :default-active="portal.activeSection" class="portal-menu" @select="portal.setActiveSection">
         <el-menu-item v-for="item in portal.navigationItems" :key="item.key" :index="item.key">
-          <span class="portal-menu__badge">{{ item.badge }}</span>
+          <img
+            class="portal-menu__icon"
+            :src="navigationIconFor(item.key)"
+            :alt="`${item.title}图标`"
+          />
           <span>{{ item.title }}</span>
         </el-menu-item>
       </el-menu>
@@ -35,6 +39,14 @@
 <script setup>
 import { computed } from 'vue';
 
+import aiHighIcon from '@/assets/ai_high.svg';
+import aiNormalIcon from '@/assets/ai_normal.svg';
+import headerLogo from '@/assets/logo_200.png';
+import shopHighIcon from '@/assets/shop_high.svg';
+import shopNormalIcon from '@/assets/shop_normal.svg';
+import skillsHighIcon from '@/assets/skills_high.svg';
+import skillsNormalIcon from '@/assets/skills_normal.svg';
+
 import AiTools from '@/components/AiTools.vue';
 import ModelStore from '@/components/ModelStore.vue';
 import SkillHub from '@/components/SkillHub.vue';
@@ -42,11 +54,28 @@ import { useUserStore } from '@/store';
 import { usePortalStore } from '@/stores/portal';
 
 const placeholderImage = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+const navigationIcons = {
+  skillhub: { normal: skillsNormalIcon, active: skillsHighIcon },
+  'ai-tools': { normal: aiNormalIcon, active: aiHighIcon },
+  'model-store': { normal: shopNormalIcon, active: shopHighIcon }
+};
+
 const portal = usePortalStore();
 const userStore = useUserStore();
 
 const displayUser = computed(() => ({
-  avatarUrl: userStore.avatar || placeholderImage,
-  name: userStore.name || portal.user.name
+  avatarUrl: userStore.avatar,
+  name: userStore.name
 }));
+
+const navigationIconFor = (key) => {
+  const iconSet = navigationIcons[key];
+
+  if (!iconSet) {
+    return placeholderImage;
+  }
+
+  return portal.activeSection === key ? iconSet.active : iconSet.normal;
+};
+
 </script>

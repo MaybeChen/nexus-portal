@@ -1,5 +1,4 @@
-export const NEXUS_API_PREFIX = '/nexus/api';
-export const API_PREFIX = NEXUS_API_PREFIX;
+export const API_PREFIX = '/wiseoffice/api/agent';
 
 export const STATUS_CODE = {
   SUCCESS: 200, // 成功
