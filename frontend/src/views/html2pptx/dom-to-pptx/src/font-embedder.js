@@ -94,7 +94,7 @@ export class PPTXEmbedFonts {
     const presentation = doc.getElementsByTagName('p:presentation')[0];
 
     // Enable embedding flags
-    presentation.setAttribute('saveSubsetFonts', 'true');
+    presentation.setAttribute('saveSubsetFonts', 'false');
     presentation.setAttribute('embedTrueTypeFonts', 'true');
 
     // Find or create embeddedFontLst
