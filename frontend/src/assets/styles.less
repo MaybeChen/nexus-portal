@@ -450,9 +450,33 @@ button {
   font-weight: 800;
 }
 
+.skill-card__download,
 .skill-card__more {
+  position: relative;
   width: 38px;
   padding: 0;
+}
+
+.skill-card__download-icon,
+.skill-card__more-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.skill-card__download-icon--high {
+  display: none;
+}
+
+.skill-card__download:hover .skill-card__download-icon--normal,
+.skill-card__download:focus .skill-card__download-icon--normal {
+  display: none;
+}
+
+.skill-card__download:hover .skill-card__download-icon--high,
+.skill-card__download:focus .skill-card__download-icon--high {
+  display: block;
 }
 
 

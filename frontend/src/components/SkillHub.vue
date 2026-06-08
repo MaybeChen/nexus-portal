@@ -26,13 +26,13 @@
             </span>
           </div>
           <div class="skill-card__actions">
-            <el-button type="primary" plain round @click="openDownloadDialog(skill)">
-              <el-icon><Download /></el-icon>
-              <span>下载</span>
+            <el-button class="skill-card__download" plain round aria-label="下载" @click="openDownloadDialog(skill)">
+              <img class="skill-card__download-icon skill-card__download-icon--normal" :src="downloadNormalIcon" alt="" aria-hidden="true" />
+              <img class="skill-card__download-icon skill-card__download-icon--high" :src="downloadHighIcon" alt="" aria-hidden="true" />
             </el-button>
             <el-dropdown v-if="canManageSkill(skill)" trigger="click" placement="bottom-end">
               <el-button class="skill-card__more" plain round aria-label="更多操作">
-                <el-icon><MoreFilled /></el-icon>
+                <img class="skill-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
@@ -134,12 +134,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Delete, Download, MoreFilled, RefreshRight } from '@element-plus/icons-vue';
+import { Delete, RefreshRight } from '@element-plus/icons-vue';
 
 import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
 import { reportBusinessEvent } from '@/request/service';
 import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
+import downloadHighIcon from '@/assets/download_high.svg';
+import downloadNormalIcon from '@/assets/download_normal.svg';
+import moreIcon from '@/assets/more.svg';
 
 const userStore = useUserStore();
 const skills = ref([]);
