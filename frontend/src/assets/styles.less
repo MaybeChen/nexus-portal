@@ -140,6 +140,7 @@ button {
   margin-bottom: 10px;
   padding: 0 18px !important;
   border-radius: 0;
+  gap: 12px;
   color: #566174;
   font-size: 15px;
   font-weight: 700;
@@ -155,6 +156,14 @@ button {
   color: #2f6ee9;
   background: linear-gradient(90deg, rgba(47, 110, 233, 0.12), rgba(47, 110, 233, 0.02));
   box-shadow: inset 3px 0 0 #2f6ee9;
+}
+
+.portal-menu__icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  object-fit: contain;
 }
 
 .portal-user__avatar {
@@ -255,7 +264,6 @@ button {
 
 .asset-grid--quarter {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 980px;
 }
 
 .asset-grid--half {
@@ -311,7 +319,6 @@ button {
   font-size: 14px;
   line-height: 1.8;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 
 .skill-card__type,
@@ -337,6 +344,33 @@ button {
   white-space: nowrap;
 }
 
+.skill-card {
+  min-height: 276px;
+  padding: 30px 28px 24px;
+}
+
+.skill-card h3 {
+  max-width: calc(100% - 124px);
+  margin-bottom: 16px;
+}
+
+.skill-card p,
+.skill-card__name,
+.skill-card__type,
+.skill-card__type .el-tag__content,
+.skill-card__actions .el-button {
+  font-weight: 400;
+}
+
+.skill-card__name {
+  display: block;
+  margin: -8px 0 12px;
+  color: #697386;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.6;
+}
+
 .skill-card__content,
 .tool-card__content {
   display: flex;
@@ -345,33 +379,22 @@ button {
   flex-direction: column;
 }
 
-.skill-card__title {
-  display: none;
-}
 
 .skill-card__actions,
 .tool-card__actions,
 .model-card__actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   margin-top: auto;
   padding-top: 18px;
 }
 
-.model-card__actions {
-  grid-template-columns: repeat(2, 112px);
-  align-self: flex-start;
-  margin-top: 16px;
-  padding-top: 0;
-}
 
 .skill-card__actions .el-button,
 .tool-card__actions .el-button,
 .model-card__actions .el-button,
 .asset-card .el-button {
-  width: 100%;
-  min-width: 0;
   height: 38px;
   margin: 0;
   border-radius: 999px;
@@ -379,10 +402,11 @@ button {
   font-weight: 800;
 }
 
+
 .skill-card__actions .el-button + .el-button,
 .tool-card__actions .el-button + .el-button,
 .model-card__actions .el-button + .el-button {
-  margin-left: 0;
+  margin-left: 15px;
 }
 
 .model-card {
