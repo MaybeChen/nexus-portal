@@ -1,4 +1,4 @@
-import { NEXUS_API_PREFIX } from './constant';
+import { API_PREFIX } from './constant';
 import { request } from './request';
 
 const noop = () => {};
@@ -11,37 +11,37 @@ const invoke = (promise, callback = noop) => {
   return promise;
 };
 
-const withNexusPrefix = (path = '') => {
+const withApiPrefix = (path = '') => {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
 
-  if (path.startsWith(NEXUS_API_PREFIX)) {
+  if (path.startsWith(API_PREFIX)) {
     return path;
   }
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${NEXUS_API_PREFIX}${normalizedPath}`;
+  return `${API_PREFIX}${normalizedPath}`;
 };
 
-export const nexusGet = (path, params = {}, callback) => {
-  return invoke(request.get(withNexusPrefix(path), params), callback);
+export const apiGet = (path, params = {}, callback) => {
+  return invoke(request.get(withApiPrefix(path), params), callback);
 };
 
-export const nexusPost = (path, data = {}, callback) => {
-  return invoke(request.post(withNexusPrefix(path), data), callback);
+export const apiPost = (path, data = {}, callback) => {
+  return invoke(request.post(withApiPrefix(path), data), callback);
 };
 
-export const nexusPut = (path, data = {}, callback) => {
-  return invoke(request.put(withNexusPrefix(path), data), callback);
+export const apiPut = (path, data = {}, callback) => {
+  return invoke(request.put(withApiPrefix(path), data), callback);
 };
 
-export const nexusDel = (path, params = {}, callback) => {
-  return invoke(request.delete(withNexusPrefix(path), params), callback);
+export const apiDel = (path, params = {}, callback) => {
+  return invoke(request.delete(withApiPrefix(path), params), callback);
 };
 
-export const nexusUpload = (path, file, data = {}, callback) => {
-  return invoke(request.upload(withNexusPrefix(path), file, data), callback);
+export const apiUpload = (path, file, data = {}, callback) => {
+  return invoke(request.upload(withApiPrefix(path), file, data), callback);
 };
 
 const saveBlob = (blob, fileName = 'download') => {
@@ -55,9 +55,9 @@ const saveBlob = (blob, fileName = 'download') => {
   window.URL.revokeObjectURL(url);
 };
 
-export const nexusDownload = (path, params = {}, callback) => {
+export const apiDownload = (path, params = {}, callback) => {
   const promise = request
-    .get(withNexusPrefix(path), params, { responseType: 'blob' })
+    .get(withApiPrefix(path), params, { responseType: 'blob' })
     .then((data) => {
       saveBlob(data, params.name);
       return data;
@@ -66,20 +66,20 @@ export const nexusDownload = (path, params = {}, callback) => {
   return invoke(promise, callback);
 };
 
-export const get = nexusGet;
-export const post = nexusPost;
-export const put = nexusPut;
-export const del = nexusDel;
-export const upload = nexusUpload;
-export const download = nexusDownload;
+export const get = apiGet;
+export const post = apiPost;
+export const put = apiPut;
+export const del = apiDel;
+export const upload = apiUpload;
+export const download = apiDownload;
 
 export default {
-  nexusGet,
-  nexusPost,
-  nexusPut,
-  nexusDel,
-  nexusUpload,
-  nexusDownload,
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDel,
+  apiUpload,
+  apiDownload,
   get,
   post,
   put,
