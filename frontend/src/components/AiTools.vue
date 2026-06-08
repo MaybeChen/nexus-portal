@@ -3,25 +3,13 @@
     <div class="workspace-panel__header">
       <div>
         <p>AI工具</p>
-        <h1>智能应用工作台</h1>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateToolDialog">＋ 创建工具</el-button>
     </div>
 
-    <div class="category-tabs">
-      <button
-        v-for="category in portal.toolCategories"
-        :key="category.key"
-        :class="['category-tab', { 'is-active': portal.activeToolCategory === category.key }]"
-        type="button"
-        @click="portal.setActiveToolCategory(category.key)"
-      >
-        {{ category.label }}
-      </button>
-    </div>
 
     <div v-loading="loadingTools" class="asset-grid asset-grid--quarter">
-      <article v-for="tool in portal.filteredTools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
+      <article v-for="tool in portal.tools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
         <img class="asset-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="工具图标占位" />
         <el-tag class="tool-card__type" type="success" effect="light">{{ tool.type || '未分类' }}</el-tag>
         <div class="tool-card__content">
@@ -46,7 +34,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingTools && portal.filteredTools.length === 0" description="暂无 AI 工具" />
+    <el-empty v-if="!loadingTools && portal.tools.length === 0" description="暂无 AI 工具" />
 
     <el-dialog v-model="toolDialogVisible" :title="toolDialogTitle" width="560px" align-center @closed="resetToolForm">
       <el-form class="create-tool-form" label-position="top">

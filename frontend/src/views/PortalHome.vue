@@ -4,16 +4,14 @@
       <div class="portal-brand">
         <img class="portal-brand__mark" :src="placeholderImage" alt="网页 logo 占位" />
         <div>
-          <strong>Nexus Portal</strong>
+          <strong>GTS技术规划与标准专利部-智能化武装库部司</strong>
           <small>算法为刃，智械为盾。</small>
         </div>
       </div>
 
       <div class="portal-user">
-        <span class="portal-user__notify">♧</span>
         <img class="portal-user__avatar" :src="displayUser.avatarUrl" alt="用户头像" />
-        <strong>Welcome，{{ displayUser.name }}</strong>
-        <span class="portal-user__chevron">⌄</span>
+        <strong>{{ displayUser.name }}</strong>
       </div>
     </header>
 

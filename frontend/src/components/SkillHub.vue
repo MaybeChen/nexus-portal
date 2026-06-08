@@ -3,8 +3,6 @@
     <div class="workspace-panel__header">
       <div>
         <p>Skill Hub</p>
-        <h1>可复用技能资产</h1>
-        <small class="workspace-panel__subtitle">沉淀可复用技能，提升团队效率，释放智能生产力。</small>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
     </div>

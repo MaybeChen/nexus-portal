@@ -44,7 +44,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 74px;
+  height: 60px;
   padding: 0 32px;
   border-bottom: 1px solid #e5eaf5;
   background: rgba(255, 255, 255, 0.96);
@@ -64,9 +64,9 @@ button {
 
 .portal-brand__mark {
   display: block;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   border-radius: 12px;
   background:
     radial-gradient(circle at 26% 22%, #28d8ff 0 4px, transparent 5px),
@@ -80,7 +80,7 @@ button {
 .portal-brand strong {
   display: block;
   color: #111827;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -100,14 +100,6 @@ button {
   font-weight: 700;
 }
 
-.portal-user__notify {
-  display: inline-grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  color: #1c2437;
-  font-size: 18px;
-}
 
 .portal-user__avatar {
   display: block;
@@ -122,20 +114,15 @@ button {
   object-fit: cover;
 }
 
-.portal-user__chevron {
-  color: #2b344a;
-  font-size: 18px;
-  transform: translateY(-2px);
-}
 
 .portal-sidebar {
   position: fixed;
   z-index: 20;
-  top: 74px;
+  top: 60px;
   bottom: 0;
   left: 0;
   width: 216px;
-  padding: 28px 14px;
+  padding: 18px 14px 24px;
   overflow: hidden;
   border-right: 1px solid #e8edf7;
   background: rgba(255, 255, 255, 0.94);
@@ -170,46 +157,6 @@ button {
   box-shadow: inset 3px 0 0 #2f6ee9;
 }
 
-.portal-sidebar__visual {
-  position: absolute;
-  z-index: 2;
-  left: 0;
-  bottom: 0;
-  width: 236px;
-  height: 236px;
-  object-fit: cover;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.portal-content {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  background:
-    radial-gradient(circle at 95% 22%, rgba(77, 102, 255, 0.1), transparent 24rem),
-    linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
-}
-
-.portal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 104px;
-  padding: 0 54px;
-  background: rgba(255, 255, 255, 0.88);
-  border-bottom: 1px solid rgba(117, 129, 171, 0.18);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(18px);
-}
-
-.portal-user {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 .portal-user__avatar {
   display: inline-grid;
   width: 26px;
@@ -224,11 +171,11 @@ button {
 .portal-main {
   position: fixed;
   z-index: 1;
-  top: 74px;
+  top: 60px;
   right: 0;
   bottom: 0;
   left: 216px;
-  padding: 28px 28px 24px;
+  padding: 24px 28px;
   overflow: hidden;
   background:
     radial-gradient(circle at 76% 5%, rgba(50, 139, 255, 0.1), transparent 26rem),
@@ -250,27 +197,20 @@ button {
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .workspace-panel__header p {
   position: relative;
   display: inline-block;
-  margin: 0 0 14px;
-  color: #1f66dc;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.workspace-panel__header p::before {
-  position: absolute;
-  left: -12px;
-  top: 3px;
-  width: 4px;
-  height: 20px;
-  content: '';
-  border-radius: 999px;
-  background: #2f75ff;
+  margin: 0;
+  color: transparent;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(90deg, #1d4fd7 0%, #27c0ff 48%, #7258ff 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
 }
 
 .workspace-panel__header h1 {
@@ -291,7 +231,7 @@ button {
 
 .primary-action.el-button {
   min-width: 132px;
-  height: 44px;
+  height: 40px;
   border: 0;
   border-radius: 10px;
   color: #fff;
@@ -301,41 +241,6 @@ button {
   box-shadow: 0 12px 24px rgba(59, 102, 242, 0.26);
 }
 
-.category-tabs {
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0 0 16px;
-  padding: 6px;
-  border: 1px solid #e3e9f5;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 8px 24px rgba(34, 55, 93, 0.04);
-}
-
-.category-tab {
-  height: 44px;
-  min-width: 0;
-  padding: 0 14px;
-  overflow: hidden;
-  border: 0;
-  border-radius: 11px;
-  color: #687287;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.category-tab.is-active {
-  color: #fff;
-  background: linear-gradient(135deg, #3b78ff, #4b6df4);
-  box-shadow: 0 8px 20px rgba(59, 120, 255, 0.22);
-}
 
 .asset-grid {
   display: grid;
@@ -362,7 +267,7 @@ button {
   display: flex;
   width: 100%;
   min-width: 0;
-  min-height: 244px;
+  min-height: 276px;
   flex-direction: column;
   overflow: hidden;
   padding: 28px 22px 22px;
@@ -478,7 +383,8 @@ button {
 }
 
 .model-card {
-  min-height: 330px;
+  min-height: 360px;
+  overflow: visible;
 }
 
 .model-card__icon {
@@ -514,7 +420,7 @@ button {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 12px;
+  padding: 8px 10px;
   border-radius: 10px;
   background: #f5f7fc;
 }
