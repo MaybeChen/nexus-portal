@@ -346,6 +346,32 @@ button {
   white-space: nowrap;
 }
 
+.skill-card {
+  min-height: 276px;
+  padding: 30px 28px 24px;
+}
+
+.skill-card h3 {
+  max-width: calc(100% - 124px);
+  margin-bottom: 16px;
+}
+
+.skill-card p,
+.skill-card__name,
+.skill-card__type,
+.skill-card__type .el-tag__content,
+.skill-card__actions .el-button {
+  font-weight: 400;
+}
+
+.skill-card__name {
+  display: block;
+  margin: -8px 0 12px;
+  color: #697386;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .skill-card__content,
 .tool-card__content {
   display: flex;
@@ -354,9 +380,6 @@ button {
   flex-direction: column;
 }
 
-.skill-card__title {
-  display: none;
-}
 
 .skill-card__actions,
 .tool-card__actions,
@@ -366,6 +389,14 @@ button {
   gap: 10px;
   margin-top: auto;
   padding-top: 18px;
+}
+
+.skill-card__actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 28px;
+  border-top: 1px solid #eef2f7;
 }
 
 .model-card__actions {
@@ -386,6 +417,16 @@ button {
   border-radius: 999px;
   font-size: 13px;
   font-weight: 800;
+}
+
+.skill-card__actions .el-button {
+  max-width: 158px;
+  background: #fff;
+  font-weight: 400;
+}
+
+.skill-card__actions .el-icon {
+  font-size: 17px;
 }
 
 .skill-card__actions .el-button + .el-button,
