@@ -6,13 +6,13 @@ const routes = [
     path: '/',
     name: 'portal-home',
     component: PortalHome,
-    meta: { title: 'Nexus Portal' }
+    meta: { title: 'WiseOffice' }
   },
   {
     path: '/html2pptx',
     name: 'html2pptx',
     component: () => import('@/views/html2pptx'),
-    meta: { title: 'HTML2PPTX - Nexus Portal' }
+    meta: { title: 'HTML2PPTX - WiseOffice' }
   }
 ];
 
@@ -22,7 +22,7 @@ const router = createRouter({
 });
 
 router.afterEach((to) => {
-  document.title = to.meta.title || 'Nexus Portal';
+  document.title = to.meta.title || 'WiseOffice';
 });
 
 export default router;

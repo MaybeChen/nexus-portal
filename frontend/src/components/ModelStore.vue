@@ -9,7 +9,6 @@
 
     <div v-loading="loadingModels" class="asset-grid asset-grid--half">
       <article v-for="model in portal.models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
-        <img class="asset-card__icon model-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="模型图标占位" />
         <div class="model-card__topline">
           <h3>{{ model.title || model.name }}</h3>
         </div>
@@ -20,15 +19,24 @@
         <div class="model-url">
           <span>调用 URL</span>
           <code>{{ getModelUrl(model) || '暂无地址' }}</code>
-          <el-button size="small" type="primary" plain @click="copyModelUrl(getModelUrl(model))">复制</el-button>
+          <el-button size="small" type="primary" plain @click="copyModelUrl(getModelUrl(model))">
+            <el-icon><CopyDocument /></el-icon>
+            <span>复制</span>
+          </el-button>
         </div>
         <div class="app-key">
           <span>apikey</span>
           <code>{{ getModelAppKey(model) }}</code>
-          <el-button size="small" type="primary" plain @click="copyAppKey(getModelAppKey(model))">复制</el-button>
+          <el-button size="small" type="primary" plain @click="copyAppKey(getModelAppKey(model))">
+            <el-icon><CopyDocument /></el-icon>
+            <span>复制</span>
+          </el-button>
         </div>
         <div class="model-card__actions" v-if="canManageModel(model)">
-          <el-button type="warning" plain round @click="openUpdateModelDialog(model)">更新</el-button>
+          <el-button type="warning" plain round @click="openUpdateModelDialog(model)">
+            <el-icon><RefreshRight /></el-icon>
+            <span>更新</span>
+          </el-button>
           <el-button
             :loading="deletingModelId === getModelId(model)"
             type="danger"
@@ -36,7 +44,8 @@
             round
             @click="handleDeleteModel(model)"
           >
-            删除
+            <el-icon><Delete /></el-icon>
+            <span>删除</span>
           </el-button>
         </div>
       </article>
@@ -76,6 +85,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { CopyDocument, Delete, RefreshRight } from '@element-plus/icons-vue';
 
 import { MODEL_CREATE, MODEL_DELETE, MODEL_STORE_LIST, MODEL_UPDATE } from '@/request/constant';
 import { get, post } from '@/request/webservice';
