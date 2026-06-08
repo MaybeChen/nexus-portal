@@ -264,7 +264,6 @@ button {
 
 .asset-grid--quarter {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 980px;
 }
 
 .asset-grid--half {
@@ -320,7 +319,6 @@ button {
   font-size: 14px;
   line-height: 1.8;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 
 .skill-card__type,
@@ -368,7 +366,8 @@ button {
   display: block;
   margin: -8px 0 12px;
   color: #697386;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: bold;
   line-height: 1.6;
 }
 
@@ -384,34 +383,18 @@ button {
 .skill-card__actions,
 .tool-card__actions,
 .model-card__actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   margin-top: auto;
   padding-top: 18px;
 }
 
-.skill-card__actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 28px;
-  border-top: 1px solid #eef2f7;
-}
-
-.model-card__actions {
-  grid-template-columns: repeat(2, 112px);
-  align-self: flex-start;
-  margin-top: 16px;
-  padding-top: 0;
-}
 
 .skill-card__actions .el-button,
 .tool-card__actions .el-button,
 .model-card__actions .el-button,
 .asset-card .el-button {
-  width: 100%;
-  min-width: 0;
   height: 38px;
   margin: 0;
   border-radius: 999px;
@@ -419,20 +402,11 @@ button {
   font-weight: 800;
 }
 
-.skill-card__actions .el-button {
-  max-width: 158px;
-  background: #fff;
-  font-weight: 400;
-}
-
-.skill-card__actions .el-icon {
-  font-size: 17px;
-}
 
 .skill-card__actions .el-button + .el-button,
 .tool-card__actions .el-button + .el-button,
 .model-card__actions .el-button + .el-button {
-  margin-left: 0;
+  margin-left: 15px;
 }
 
 .model-card {
