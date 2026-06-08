@@ -2,10 +2,10 @@
   <div class="portal-shell">
     <header class="portal-header">
       <div class="portal-brand">
-        <img class="portal-brand__mark" :src="headerLogo" alt="GTS 智能化武装库部司 logo" />
+        <img class="portal-brand__mark" :src="headerLogo" alt="GTS 智能化装备库 logo" />
         <div>
-          <strong>GTS技术规划与标准专利部-智能化武装库部司</strong>
-          <small>算法为刃，智械为盾。</small>
+          <strong>GTS技术规划与标准专利部-智能化装备库</strong>
+          <small>量身定制专属AI装备库实现部门办公效率倍增</small>
         </div>
       </div>
 
