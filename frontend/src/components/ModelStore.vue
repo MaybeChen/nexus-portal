@@ -3,13 +3,13 @@
     <div class="workspace-panel__header">
       <div>
         <p>模型商店</p>
-        <h1>模型资产与 AppKey</h1>
       </div>
-      <el-button type="primary" round @click="openCreateModelDialog">增加模型</el-button>
+      <el-button class="primary-action" type="primary" round @click="openCreateModelDialog">＋ 增加模型</el-button>
     </div>
 
     <div v-loading="loadingModels" class="asset-grid asset-grid--half">
       <article v-for="model in portal.models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
+        <img class="asset-card__icon model-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="模型图标占位" />
         <div class="model-card__topline">
           <h3>{{ model.title || model.name }}</h3>
         </div>
@@ -23,6 +23,7 @@
           <el-button size="small" type="primary" plain @click="copyModelUrl(getModelUrl(model))">复制</el-button>
         </div>
         <div class="app-key">
+          <span>apikey</span>
           <code>{{ getModelAppKey(model) }}</code>
           <el-button size="small" type="primary" plain @click="copyAppKey(getModelAppKey(model))">复制</el-button>
         </div>
@@ -43,7 +44,7 @@
 
     <el-empty v-if="!loadingModels && portal.models.length === 0" description="暂无模型资产" />
 
-    <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" align-center @closed="resetModelForm">
+    <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" append-to-body align-center @closed="resetModelForm">
       <el-form class="create-model-form" label-position="top">
         <el-form-item label="名称" required>
           <el-input v-model.trim="modelForm.title" placeholder="输入模型名称" />
