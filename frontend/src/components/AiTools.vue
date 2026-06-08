@@ -9,7 +9,7 @@
 
 
     <div v-loading="loadingTools" class="asset-grid asset-grid--quarter">
-      <article v-for="tool in portal.tools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
+      <article v-for="tool in tools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
         <el-tag class="tool-card__type" type="success" effect="light">{{ tool.type || '未分类' }}</el-tag>
         <div class="tool-card__content">
           <h3>{{ tool.title || tool.name }}</h3>
@@ -40,7 +40,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingTools && portal.tools.length === 0" description="暂无 AI 工具" />
+    <el-empty v-if="!loadingTools && tools.length === 0" description="暂无 AI 工具" />
 
     <el-dialog v-model="toolDialogVisible" :title="toolDialogTitle" width="560px" append-to-body align-center @closed="resetToolForm">
       <el-form class="create-tool-form" label-position="top">
@@ -78,10 +78,9 @@ import { Delete, Promotion, RefreshRight } from '@element-plus/icons-vue';
 import { AI_TOOL_CREATE, AI_TOOL_DELETE, AI_TOOL_LIST, AI_TOOL_UPDATE } from '@/request/constant';
 import { get, post } from '@/request/webservice';
 import { useUserStore } from '@/store';
-import { usePortalStore } from '@/stores/portal';
 
-const portal = usePortalStore();
 const userStore = useUserStore();
+const tools = ref([]);
 
 const toolTypeOptions = ['通用与办公', '邮件与沟通', '会议与日程', '搜索与信息查询', '数据分析', '其他'];
 const initialToolForm = () => ({
@@ -161,7 +160,7 @@ const loadTools = () => {
       return;
     }
 
-    portal.setTools(normalizeToolList(data));
+    tools.value = normalizeToolList(data);
   });
 };
 

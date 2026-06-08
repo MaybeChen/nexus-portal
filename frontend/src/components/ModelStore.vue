@@ -8,7 +8,7 @@
     </div>
 
     <div v-loading="loadingModels" class="asset-grid asset-grid--half">
-      <article v-for="model in portal.models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
+      <article v-for="model in models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
         <div class="model-card__topline">
           <h3>{{ model.title || model.name }}</h3>
         </div>
@@ -51,7 +51,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingModels && portal.models.length === 0" description="暂无模型资产" />
+    <el-empty v-if="!loadingModels && models.length === 0" description="暂无模型资产" />
 
     <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" append-to-body align-center @closed="resetModelForm">
       <el-form class="create-model-form" label-position="top">
@@ -90,10 +90,9 @@ import { CopyDocument, Delete, RefreshRight } from '@element-plus/icons-vue';
 import { MODEL_CREATE, MODEL_DELETE, MODEL_STORE_LIST, MODEL_UPDATE } from '@/request/constant';
 import { get, post } from '@/request/webservice';
 import { useUserStore } from '@/store';
-import { usePortalStore } from '@/stores/portal';
 
-const portal = usePortalStore();
 const userStore = useUserStore();
+const models = ref([]);
 
 const initialModelForm = () => ({
   id: '',
@@ -188,7 +187,7 @@ const loadModels = () => {
       return;
     }
 
-    portal.setModels(normalizeModelList(data));
+    models.value = normalizeModelList(data);
   });
 };
 
