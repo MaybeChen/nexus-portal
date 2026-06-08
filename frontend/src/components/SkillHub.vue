@@ -15,27 +15,42 @@
           <span v-if="skill.title && skill.name && skill.title !== skill.name" class="skill-card__name">{{ skill.name }}</span>
           <p>{{ skill.description }}</p>
         </div>
-        <div class="skill-card__actions">
-          <el-button type="primary" plain round @click="openDownloadDialog(skill)">
-            <el-icon><Download /></el-icon>
-            <span>下载</span>
-          </el-button>
-          <template v-if="canManageSkill(skill)">
-            <el-button type="warning" plain round @click="openUpdateSkillDialog(skill)">
-              <el-icon><RefreshRight /></el-icon>
-              <span>更新</span>
+        <div class="skill-card__footer">
+          <div class="skill-card__meta">
+            <span class="skill-card__usage">
+              <span class="skill-card__usage-icon" aria-hidden="true">♨</span>
+              {{ formatUsageCount(getSkillUsageCount(skill)) }} 次使用
+            </span>
+            <span v-if="getSkillAuthorText(skill)" class="skill-card__author" :title="getSkillAuthorText(skill)">
+              · {{ getSkillAuthorText(skill) }}
+            </span>
+          </div>
+          <div class="skill-card__actions">
+            <el-button type="primary" plain round @click="openDownloadDialog(skill)">
+              <el-icon><Download /></el-icon>
+              <span>下载</span>
             </el-button>
-            <el-button
-              :loading="deletingSkillId === getSkillId(skill)"
-              type="danger"
-              plain
-              round
-              @click="handleDeleteSkill(skill)"
-            >
-              <el-icon><Delete /></el-icon>
-              <span>删除</span>
-            </el-button>
-          </template>
+            <el-dropdown v-if="canManageSkill(skill)" trigger="click" placement="bottom-end">
+              <el-button class="skill-card__more" plain round aria-label="更多操作">
+                <el-icon><MoreFilled /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="openUpdateSkillDialog(skill)">
+                    <el-icon><RefreshRight /></el-icon>
+                    <span>更新</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    :disabled="Boolean(deletingSkillId)"
+                    @click="handleDeleteSkill(skill)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    <span>{{ deletingSkillId === getSkillId(skill) ? '删除中' : '删除' }}</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
       </article>
     </div>
@@ -119,7 +134,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Delete, Download, RefreshRight } from '@element-plus/icons-vue';
+import { Delete, Download, MoreFilled, RefreshRight } from '@element-plus/icons-vue';
 
 import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
 import { reportBusinessEvent } from '@/request/service';
@@ -180,6 +195,57 @@ const getSkillReportLogic = (skill = {}) => [getSkillId(skill), skill.title || '
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
+const normalizeCount = (value) => {
+  const count = Number(value);
+
+  return Number.isFinite(count) && count > 0 ? count : 0;
+};
+const getDisplayValue = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'object') {
+    return normalizeIdentity(value.name || value.nickname || value.username || value.employeeNumber || value.id || value._id);
+  }
+
+  return normalizeIdentity(value);
+};
+const getSkillUsageCount = (skill = {}) => {
+  return normalizeCount(
+    skill.usageCount
+      ?? skill.usage_count
+      ?? skill.useCount
+      ?? skill.use_count
+      ?? skill.usedCount
+      ?? skill.used_count
+      ?? skill.downloadCount
+      ?? skill.download_count
+      ?? skill.downloads
+      ?? skill.count
+  );
+};
+const formatUsageCount = (count) => {
+  const normalizedCount = normalizeCount(count);
+
+  if (normalizedCount >= 10000) {
+    const formattedCount = (normalizedCount / 10000).toFixed(1).replace(/\.0$/, '');
+
+    return `${formattedCount}万`;
+  }
+
+  return String(normalizedCount);
+};
+const getSkillAuthorText = (skill = {}) => {
+  const author = getDisplayValue(skill.author || skill.authorName || skill.owner || skill.ownerName);
+  const creator = getDisplayValue(skill.creator ?? skill.creatorId ?? skill.createdBy);
+
+  if (!author && !creator) {
+    return '';
+  }
+
+  return `@${author || creator}${creator && creator !== author ? ` ${creator}` : ''}`;
+};
 
 const isAdmin = computed(() => ['admin', '管理员'].includes(normalizeRole(userStore.role)));
 const currentUserIdentities = computed(() => {
