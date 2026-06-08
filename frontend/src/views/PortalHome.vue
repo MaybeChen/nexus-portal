@@ -70,7 +70,7 @@ const userStore = useUserStore();
 
 const displayUser = computed(() => ({
   avatarUrl: userStore.avatar || placeholderImage,
-  name: userStore.name || '陈超'
+  name: userStore.name
 }));
 
 const setActiveSection = (key) => {
