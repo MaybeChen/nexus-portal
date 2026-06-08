@@ -41,7 +41,7 @@ export default ({ mode }) => {
       cros: true,
       open: true,
       proxy: {
-        "/nexus/api": {
+        "/wiseoffice/api/agent": {
           target: devServer,
           changeOrigin: true,
           secure: false,
