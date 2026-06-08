@@ -10,16 +10,21 @@
 
     <div v-loading="loadingTools" class="asset-grid asset-grid--quarter">
       <article v-for="tool in portal.tools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
-        <img class="asset-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="工具图标占位" />
         <el-tag class="tool-card__type" type="success" effect="light">{{ tool.type || '未分类' }}</el-tag>
         <div class="tool-card__content">
           <h3>{{ tool.title || tool.name }}</h3>
           <p>{{ tool.description }}</p>
         </div>
         <div class="tool-card__actions">
-          <el-button type="success" plain round @click="useTool(tool)">使用</el-button>
+          <el-button type="success" plain round @click="useTool(tool)">
+            <el-icon><Promotion /></el-icon>
+            <span>使用</span>
+          </el-button>
           <template v-if="canManageTool(tool)">
-            <el-button type="warning" plain round @click="openUpdateToolDialog(tool)">更新</el-button>
+            <el-button type="warning" plain round @click="openUpdateToolDialog(tool)">
+              <el-icon><RefreshRight /></el-icon>
+              <span>更新</span>
+            </el-button>
             <el-button
               :loading="deletingToolId === getToolId(tool)"
               type="danger"
@@ -27,7 +32,8 @@
               round
               @click="handleDeleteTool(tool)"
             >
-              删除
+              <el-icon><Delete /></el-icon>
+              <span>删除</span>
             </el-button>
           </template>
         </div>
@@ -67,6 +73,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Delete, Promotion, RefreshRight } from '@element-plus/icons-vue';
 
 import { AI_TOOL_CREATE, AI_TOOL_DELETE, AI_TOOL_LIST, AI_TOOL_UPDATE } from '@/request/constant';
 import { get, post } from '@/request/webservice';

@@ -9,17 +9,22 @@
 
     <div v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
       <article v-for="skill in portal.skills" :key="skill.id || skill.name" class="asset-card skill-card">
-        <img class="asset-card__icon" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="技能图标占位" />
         <el-tag class="skill-card__type" type="primary" effect="light">{{ skill.type || '未分类' }}</el-tag>
         <div class="skill-card__content">
-          <span class="skill-card__title">{{ skill.title || skill.name }}</span>
-          <h3>{{ skill.name }}</h3>
+          <h3>{{ skill.title || skill.name }}</h3>
+          <span v-if="skill.title && skill.name && skill.title !== skill.name" class="skill-card__name">{{ skill.name }}</span>
           <p>{{ skill.description }}</p>
         </div>
         <div class="skill-card__actions">
-          <el-button type="primary" plain round @click="openDownloadDialog(skill)">下载</el-button>
+          <el-button type="primary" plain round @click="openDownloadDialog(skill)">
+            <el-icon><Download /></el-icon>
+            <span>下载</span>
+          </el-button>
           <template v-if="canManageSkill(skill)">
-            <el-button type="warning" plain round @click="openUpdateSkillDialog(skill)">更新</el-button>
+            <el-button type="warning" plain round @click="openUpdateSkillDialog(skill)">
+              <el-icon><RefreshRight /></el-icon>
+              <span>更新</span>
+            </el-button>
             <el-button
               :loading="deletingSkillId === getSkillId(skill)"
               type="danger"
@@ -27,7 +32,8 @@
               round
               @click="handleDeleteSkill(skill)"
             >
-              删除
+              <el-icon><Delete /></el-icon>
+              <span>删除</span>
             </el-button>
           </template>
         </div>
@@ -113,6 +119,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Delete, Download, RefreshRight } from '@element-plus/icons-vue';
 
 import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
 import { reportBusinessEvent } from '@/request/service';
