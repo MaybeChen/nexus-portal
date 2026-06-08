@@ -8,7 +8,7 @@
     </div>
 
     <div v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
-      <article v-for="skill in portal.skills" :key="skill.id || skill.name" class="asset-card skill-card">
+      <article v-for="skill in skills" :key="skill.id || skill.name" class="asset-card skill-card">
         <el-tag class="skill-card__type" type="primary" effect="light">{{ skill.type || '未分类' }}</el-tag>
         <div class="skill-card__content">
           <h3>{{ skill.title || skill.name }}</h3>
@@ -40,7 +40,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingSkills && portal.skills.length === 0" description="暂无技能资产" />
+    <el-empty v-if="!loadingSkills && skills.length === 0" description="暂无技能资产" />
 
     <el-dialog v-model="downloadVisible" :title="`${activeSkill?.title || activeSkill?.name || '技能'} 文件列表`" width="520px" append-to-body align-center>
       <div v-if="downloadFiles.length" class="download-file-list">
@@ -125,10 +125,9 @@ import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKI
 import { reportBusinessEvent } from '@/request/service';
 import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
-import { usePortalStore } from '@/stores/portal';
 
-const portal = usePortalStore();
 const userStore = useUserStore();
+const skills = ref([]);
 
 const skillPublishCategories = ['通用与办公', '邮件与沟通', '会议与日程', '搜索与信息查询', '数据分析', '其他'];
 const initialCreateSkillForm = () => ({
@@ -225,7 +224,7 @@ const loadSkills = () => {
       return;
     }
 
-    portal.setSkills(normalizeSkillList(data));
+    skills.value = normalizeSkillList(data);
   });
 };
 
