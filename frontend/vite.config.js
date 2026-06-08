@@ -10,7 +10,7 @@ import {
 import { resolve } from "path";
 
 const serverAdds = {
-  dev: "http://127.0.0.1:3000",
+  dev: "http://127.0.0.1:3001",
   prod: "https://astr-lab.gts.huawei.com/",
 };
 
