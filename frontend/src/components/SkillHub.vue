@@ -18,7 +18,7 @@
         <div class="skill-card__footer">
           <div class="skill-card__meta">
             <span class="skill-card__usage">
-              <span class="skill-card__usage-icon" aria-hidden="true">♨</span>
+              <img class="skill-card__usage-icon" :src="skillUsageHotIcon" alt="" aria-hidden="true" />
               {{ formatUsageCount(getSkillUsageCount(skill)) }} 次使用
             </span>
             <span v-if="getSkillAuthorText(skill)" class="skill-card__author" :title="getSkillAuthorText(skill)">
@@ -143,6 +143,7 @@ import { useUserStore } from '@/store';
 import downloadHighIcon from '@/assets/download_high.svg';
 import downloadNormalIcon from '@/assets/download_normal.svg';
 import moreIcon from '@/assets/more.svg';
+import skillUsageHotIcon from '@/assets/hot.svg';
 
 const userStore = useUserStore();
 const skills = ref([]);
