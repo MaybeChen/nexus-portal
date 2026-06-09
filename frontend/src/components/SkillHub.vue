@@ -91,6 +91,9 @@
             <el-option v-for="category in skillPublishCategories" :key="category" :label="category" :value="category" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="isEditingSkill" label="更新信息" required>
+          <el-input v-model.trim="createSkillForm.update_logic" placeholder="输入本次技能更新信息" :rows="4" type="textarea" />
+        </el-form-item>
         <el-form-item label="技能包上传" required>
           <input ref="packageInputRef" class="package-input" type="file" @change="handlePackageChange" />
           <div class="package-upload">
@@ -154,6 +157,7 @@ const initialCreateSkillForm = () => ({
   name: '',
   description: '',
   type: '',
+  update_logic: '',
   files: []
 });
 
@@ -182,7 +186,7 @@ const canPublishSkill = computed(() => {
       && createSkillForm.name
       && createSkillForm.description
       && createSkillForm.type
-      && (!isEditingSkill.value || createSkillForm.id)
+      && (!isEditingSkill.value || (createSkillForm.id && createSkillForm.update_logic))
       && hasUploadedPackage.value
       && !uploadingPackage.value
       && !deletingPackageId.value
@@ -341,6 +345,7 @@ const openUpdateSkillDialog = (skill) => {
     name: skill.name || '',
     description: skill.description || '',
     type: skill.type || '',
+    update_logic: '',
     files: normalizeFiles(skill.files)
   });
   createSkillVisible.value = true;
@@ -440,10 +445,12 @@ const submitSkill = async () => {
     return;
   }
 
-  const { id, title, name, description, type, files } = createSkillForm;
+  const { id, title, name, description, type, update_logic, files } = createSkillForm;
   const isUpdate = isEditingSkill.value;
   const path = isUpdate ? SKILL_UPDATE : CREATESKILL;
-  const payload = isUpdate ? { id, title, name, description, type, files } : { title, name, description, type, files };
+  const payload = isUpdate
+    ? { id, title, name, description, type, update_logic, files }
+    : { title, name, description, type, files };
 
   publishingSkill.value = true;
 
