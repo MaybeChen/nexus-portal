@@ -8,7 +8,7 @@
     </div>
 
 
-    <div v-loading="loadingTools" class="asset-grid asset-grid--quarter">
+    <div v-if="loadingTools || tools.length > 0" v-loading="loadingTools" class="asset-grid asset-grid--quarter">
       <article v-for="tool in tools" :key="getToolId(tool) || tool.title" class="asset-card tool-card">
         <el-tag class="tool-card__type" type="success" effect="light">{{ tool.type || '未分类' }}</el-tag>
         <div class="tool-card__content">
@@ -55,7 +55,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingTools && tools.length === 0" description="暂无 AI 工具" />
+    <el-empty v-if="!loadingTools && tools.length === 0" class="asset-empty" description="暂无 AI 工具" />
 
     <el-dialog v-model="toolDialogVisible" :title="toolDialogTitle" width="560px" append-to-body align-center @closed="resetToolForm">
       <el-form class="create-tool-form" label-position="top">

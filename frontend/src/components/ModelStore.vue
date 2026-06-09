@@ -7,7 +7,7 @@
       <el-button class="primary-action" type="primary" round @click="openCreateModelDialog">＋ 增加模型</el-button>
     </div>
 
-    <div v-loading="loadingModels" class="asset-grid asset-grid--half">
+    <div v-if="loadingModels || models.length > 0" v-loading="loadingModels" class="asset-grid asset-grid--half">
       <article v-for="model in models" :key="getModelId(model) || model.title || model.name" class="asset-card model-card">
         <div class="model-card__topline">
           <h3>{{ model.title || model.name }}</h3>
@@ -66,7 +66,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingModels && models.length === 0" description="暂无模型资产" />
+    <el-empty v-if="!loadingModels && models.length === 0" class="asset-empty" description="暂无模型资产" />
 
     <el-dialog v-model="modelDialogVisible" :title="modelDialogTitle" width="560px" append-to-body align-center @closed="resetModelForm">
       <el-form class="create-model-form" label-position="top">

@@ -7,7 +7,7 @@
       <el-button class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
     </div>
 
-    <div v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
+    <div v-if="loadingSkills || skills.length > 0" v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
       <article v-for="skill in skills" :key="skill.id || skill.name" class="asset-card skill-card">
         <el-tag class="skill-card__type" type="primary" effect="light">{{ skill.type || '未分类' }}</el-tag>
         <div class="skill-card__content">
@@ -55,7 +55,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingSkills && skills.length === 0" description="暂无技能资产" />
+    <el-empty v-if="!loadingSkills && skills.length === 0" class="asset-empty" description="暂无技能资产" />
 
     <el-dialog v-model="downloadVisible" :title="`${activeSkill?.title || activeSkill?.name || '技能'} 文件列表`" width="520px" append-to-body align-center>
       <div v-if="downloadFiles.length" class="download-file-list">
