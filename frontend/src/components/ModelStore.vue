@@ -2,7 +2,7 @@
   <section class="workspace-panel">
     <div class="workspace-panel__header">
       <div>
-        <p>模型商店</p>
+        <p>模型</p>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateModelDialog">＋ 增加模型</el-button>
     </div>

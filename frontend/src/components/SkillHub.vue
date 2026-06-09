@@ -2,7 +2,7 @@
   <section class="workspace-panel">
     <div class="workspace-panel__header">
       <div>
-        <p>Skill Hub</p>
+        <p>技能</p>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
     </div>
@@ -26,7 +26,7 @@
             </span>
           </div>
           <div class="skill-card__actions">
-            <el-button class="skill-card__download" aria-label="下载" @click="openDownloadDialog(skill)">
+            <el-button class="skill-card__download" aria-label="下载" title="下载" @click="openDownloadDialog(skill)">
               <img class="skill-card__download-icon skill-card__download-icon--normal" :src="downloadNormalIcon" alt="" aria-hidden="true" />
               <img class="skill-card__download-icon skill-card__download-icon--high" :src="downloadHighIcon" alt="" aria-hidden="true" />
             </el-button>

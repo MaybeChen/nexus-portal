@@ -2,7 +2,7 @@
   <section class="workspace-panel">
     <div class="workspace-panel__header">
       <div>
-        <p>AI工具</p>
+        <p>工具</p>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateToolDialog">＋ 创建工具</el-button>
     </div>
@@ -26,9 +26,8 @@
             </span>
           </div>
           <div class="tool-card__actions">
-            <el-button class="tool-card__use" type="success" plain round @click="useTool(tool)">
+            <el-button class="tool-card__use" aria-label="下载" title="下载" @click="useTool(tool)">
               <el-icon><Promotion /></el-icon>
-              <span>使用</span>
             </el-button>
             <el-dropdown v-if="canManageTool(tool)" trigger="click" placement="bottom-end">
               <el-button class="tool-card__more" aria-label="更多操作">
