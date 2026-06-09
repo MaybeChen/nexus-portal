@@ -694,6 +694,10 @@ button {
   margin-bottom: 16px;
 }
 
+.app-key {
+  grid-template-columns: 84px minmax(0, 1fr) 28px 28px;
+}
+
 .app-key span,
 .model-url span {
   color: #4a556b;
@@ -711,6 +715,7 @@ button {
   white-space: nowrap;
 }
 
+.app-key .model-secret-button,
 .app-key .model-copy-button,
 .model-url .model-copy-button {
   width: 28px;
@@ -723,6 +728,8 @@ button {
   box-shadow: none;
 }
 
+.app-key .model-secret-button:hover,
+.app-key .model-secret-button:focus,
 .app-key .model-copy-button:hover,
 .app-key .model-copy-button:focus,
 .model-url .model-copy-button:hover,
@@ -733,11 +740,16 @@ button {
   box-shadow: none;
 }
 
+.app-key .model-secret-button img,
 .app-key .model-copy-button .el-icon,
 .model-url .model-copy-button .el-icon {
   width: 20px;
   height: 20px;
   font-size: 20px;
+}
+
+.app-key .model-secret-button img {
+  display: block;
 }
 
 .create-skill-form .el-select,
