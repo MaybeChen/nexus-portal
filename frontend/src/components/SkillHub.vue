@@ -143,6 +143,7 @@ import { useUserStore } from '@/store';
 import downloadHighIcon from '@/assets/download_high.svg';
 import downloadNormalIcon from '@/assets/download_normal.svg';
 import moreIcon from '@/assets/more.svg';
+import hotIcon from '@/assets/hot.svg';
 
 const hotIcon = 'assets/hot.svg';
 
