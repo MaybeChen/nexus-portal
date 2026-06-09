@@ -25,7 +25,25 @@
         </div>
         <div class="app-key">
           <span>apikey</span>
-          <code>{{ getModelAppKey(model) }}</code>
+          <code>{{ getModelAppKeyDisplayText(model) }}</code>
+          <el-button
+            class="model-secret-button"
+            aria-label="按住显示 AppKey"
+            title="按住显示"
+            @mousedown.prevent="showAppKey(model)"
+            @mouseup="hideAppKey(model)"
+            @mouseleave="hideAppKey(model)"
+            @blur="hideAppKey(model)"
+            @touchstart.prevent="showAppKey(model)"
+            @touchend="hideAppKey(model)"
+            @touchcancel="hideAppKey(model)"
+            @keydown.space.prevent="showAppKey(model)"
+            @keyup.space="hideAppKey(model)"
+            @keydown.enter.prevent="showAppKey(model)"
+            @keyup.enter="hideAppKey(model)"
+          >
+            <img :src="eyeIcon" alt="" aria-hidden="true" />
+          </el-button>
           <el-button class="model-copy-button" aria-label="复制 AppKey" title="复制" @click="copyAppKey(model)">
             <el-icon><CopyDocument /></el-icon>
           </el-button>
@@ -107,6 +125,7 @@ import { get, post } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import moreIcon from '@/assets/more.svg';
 import modelUsageHotIcon from '@/assets/hot.svg';
+import eyeIcon from '@/assets/eye.svg';
 
 const userStore = useUserStore();
 const models = ref([]);
@@ -125,6 +144,7 @@ const modelDialogVisible = ref(false);
 const submittingModel = ref(false);
 const deletingModelId = ref('');
 const editingModelId = ref('');
+const visibleAppKeyModel = ref(null);
 const modelForm = reactive(initialModelForm());
 
 const isEditingModel = computed(() => Boolean(editingModelId.value));
@@ -215,6 +235,27 @@ const normalizeModels = (models) => {
 
 const getModelItems = (model = {}) => normalizeModels(model.models || model.supportedModels);
 const getModelAppKey = (model = {}) => model.app_key || model.appKey || '';
+const getMaskedAppKey = (model = {}) => '*'.repeat(getModelAppKey(model).length);
+const isAppKeyVisible = (model) => visibleAppKeyModel.value === model;
+const getModelAppKeyDisplayText = (model = {}) => {
+  const appKey = getModelAppKey(model);
+
+  if (!appKey) {
+    return '';
+  }
+
+  return isAppKeyVisible(model) ? appKey : getMaskedAppKey(model);
+};
+const showAppKey = (model) => {
+  if (getModelAppKey(model)) {
+    visibleAppKeyModel.value = model;
+  }
+};
+const hideAppKey = (model) => {
+  if (visibleAppKeyModel.value === model) {
+    visibleAppKeyModel.value = null;
+  }
+};
 const getModelUrl = (model = {}) => model.url || model.link || '';
 
 const isAdmin = computed(() => ['admin', '管理员'].includes(normalizeRole(userStore.role)));
