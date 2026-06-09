@@ -18,7 +18,7 @@
         <div class="skill-card__footer">
           <div class="skill-card__meta">
             <span class="skill-card__usage">
-              <span class="skill-card__usage-icon" aria-hidden="true">♨</span>
+              <img class="skill-card__usage-icon" :src="skillUsageHotIcon" alt="" aria-hidden="true" />
               {{ formatUsageCount(getSkillUsageCount(skill)) }} 次使用
             </span>
             <span v-if="getSkillAuthorText(skill)" class="skill-card__author" :title="getSkillAuthorText(skill)">
@@ -136,13 +136,13 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, RefreshRight } from '@element-plus/icons-vue';
 
-import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
-import { reportBusinessEvent } from '@/request/service';
+import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_COUNT, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
 import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import downloadHighIcon from '@/assets/download_high.svg';
 import downloadNormalIcon from '@/assets/download_normal.svg';
 import moreIcon from '@/assets/more.svg';
+import skillUsageHotIcon from '@/assets/hot.svg';
 
 const userStore = useUserStore();
 const skills = ref([]);
@@ -194,7 +194,6 @@ const downloadFiles = computed(() => activeSkill.value?.files || []);
 const normalizeSkillList = (data) => (Array.isArray(data) ? data : []);
 const getSkillId = (skill = {}) => skill.id || skill._id || '';
 const getFileId = (file = {}) => file.id || file.fileId || '';
-const getSkillReportLogic = (skill = {}) => [getSkillId(skill), skill.title || '', skill.name || ''].join('|');
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
@@ -216,7 +215,8 @@ const getDisplayValue = (value) => {
 };
 const getSkillUsageCount = (skill = {}) => {
   return normalizeCount(
-    skill.usageCount
+    skill.used
+      ?? skill.usageCount
       ?? skill.usage_count
       ?? skill.useCount
       ?? skill.use_count
@@ -495,9 +495,15 @@ const reportSkillDownload = () => {
     return;
   }
 
+  const skill = activeSkill.value || {};
   downloadEventReported.value = true;
-  reportBusinessEvent('skill', getSkillReportLogic(activeSkill.value)).catch((error) => {
-    console.warn('技能下载事件上报失败', error);
+  post(SKILL_COUNT, {
+    id: getSkillId(skill),
+    title: skill.title || '',
+    name: skill.name || '',
+    used: getSkillUsageCount(skill)
+  }).catch((error) => {
+    console.warn('技能使用次数上报失败', error);
   });
 };
 
