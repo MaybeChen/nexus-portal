@@ -13,6 +13,7 @@ export const CREATESKILL = '/skills/create';
 export const SKILL_UPDATE = '/skills/update';
 export const SKILL_DELETE = '/skills/delete';
 export const SKILL_LIST = '/skills/list';
+export const SKILL_COUNT = '/skills/count';
 export const AI_TOOL_CREATE = '/tool/create';
 export const AI_TOOL_UPDATE = '/tool/update';
 export const AI_TOOL_DELETE = '/tool/delete';
