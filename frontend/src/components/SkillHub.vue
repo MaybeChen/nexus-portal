@@ -14,6 +14,10 @@
           <h3>{{ skill.title || skill.name }}</h3>
           <span v-if="skill.title && skill.name && skill.title !== skill.name" class="skill-card__name">{{ skill.name }}</span>
           <p>{{ skill.description }}</p>
+          <div v-if="getLatestSkillUpdateLog(skill)" class="skill-card__update">
+            <span :title="getLatestSkillUpdateLog(skill).logic">最近更新：{{ getLatestSkillUpdateLog(skill).time }}</span>
+            <el-button class="skill-card__update-button" type="primary" link @click="openUpdateLogDialog(skill)">更新详情</el-button>
+          </div>
         </div>
         <div class="skill-card__footer">
           <div class="skill-card__meta">
@@ -75,6 +79,28 @@
       <el-empty v-else description="该技能暂无可下载文件" />
     </el-dialog>
 
+    <el-dialog
+      v-model="updateLogVisible"
+      :title="`${activeUpdateLogSkill?.title || activeUpdateLogSkill?.name || '技能'} 更新详情`"
+      width="560px"
+      append-to-body
+      align-center
+      class="skill-update-dialog"
+      body-class="skill-update-dialog__body"
+    >
+      <el-timeline v-if="activeSkillUpdateLogs.length" class="skill-update-timeline">
+        <el-timeline-item
+          v-for="(item, index) in activeSkillUpdateLogs"
+          :key="`${item.time}-${index}`"
+          :timestamp="item.time"
+          placement="top"
+        >
+          <p class="skill-update-timeline__logic">{{ item.logic }}</p>
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-else description="暂无更新记录" />
+    </el-dialog>
+
     <el-dialog v-model="createSkillVisible" :title="skillDialogTitle" width="560px" append-to-body align-center @closed="resetCreateSkillForm">
       <el-form class="create-skill-form" label-position="top">
         <el-form-item label="标题" required>
@@ -82,6 +108,9 @@
         </el-form-item>
         <el-form-item label="技能名称" required>
           <el-input v-model.trim="createSkillForm.name" placeholder="skill的真实名称，如pptx-craft" />
+        </el-form-item>
+        <el-form-item v-if="isEditingSkill" label="更新信息" required>
+          <el-input v-model.trim="createSkillForm.update_logic" placeholder="输入本次技能更新信息" :rows="4" type="textarea" />
         </el-form-item>
         <el-form-item label="描述" required>
           <el-input v-model.trim="createSkillForm.description" placeholder="输入技能描述" :rows="4" type="textarea" />
@@ -154,6 +183,7 @@ const initialCreateSkillForm = () => ({
   name: '',
   description: '',
   type: '',
+  update_logic: '',
   files: []
 });
 
@@ -168,7 +198,9 @@ const editingSkillId = ref('');
 const pendingDeletedPackageFiles = ref([]);
 const createSkillForm = reactive(initialCreateSkillForm());
 const downloadVisible = ref(false);
+const updateLogVisible = ref(false);
 const activeSkill = ref(null);
+const activeUpdateLogSkill = ref(null);
 const downloadingFileId = ref('');
 const downloadEventReported = ref(false);
 
@@ -182,7 +214,7 @@ const canPublishSkill = computed(() => {
       && createSkillForm.name
       && createSkillForm.description
       && createSkillForm.type
-      && (!isEditingSkill.value || createSkillForm.id)
+      && (!isEditingSkill.value || (createSkillForm.id && createSkillForm.update_logic))
       && hasUploadedPackage.value
       && !uploadingPackage.value
       && !deletingPackageId.value
@@ -197,6 +229,38 @@ const getFileId = (file = {}) => file.id || file.fileId || '';
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
+const normalizeSkillUpdateLogs = (updateLogic) => {
+  if (!Array.isArray(updateLogic)) {
+    return [];
+  }
+
+  return updateLogic
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const time = normalizeIdentity(item.time);
+      const logic = normalizeIdentity(item.logic);
+
+      if (!time && !logic) {
+        return null;
+      }
+
+      return {
+        time: time || '未知时间',
+        logic: logic || '暂无更新内容'
+      };
+    })
+    .filter(Boolean);
+};
+const getSkillUpdateLogs = (skill = {}) => normalizeSkillUpdateLogs(skill.update_logic);
+const getLatestSkillUpdateLog = (skill = {}) => {
+  const updateLogs = getSkillUpdateLogs(skill);
+
+  return updateLogs.length ? updateLogs[updateLogs.length - 1] : null;
+};
+const activeSkillUpdateLogs = computed(() => getSkillUpdateLogs(activeUpdateLogSkill.value).slice().reverse());
 const normalizeCount = (value) => {
   const count = Number(value);
 
@@ -341,6 +405,7 @@ const openUpdateSkillDialog = (skill) => {
     name: skill.name || '',
     description: skill.description || '',
     type: skill.type || '',
+    update_logic: '',
     files: normalizeFiles(skill.files)
   });
   createSkillVisible.value = true;
@@ -440,10 +505,12 @@ const submitSkill = async () => {
     return;
   }
 
-  const { id, title, name, description, type, files } = createSkillForm;
+  const { id, title, name, description, type, update_logic, files } = createSkillForm;
   const isUpdate = isEditingSkill.value;
   const path = isUpdate ? SKILL_UPDATE : CREATESKILL;
-  const payload = isUpdate ? { id, title, name, description, type, files } : { title, name, description, type, files };
+  const payload = isUpdate
+    ? { id, title, name, description, type, update_logic, files }
+    : { title, name, description, type, files };
 
   publishingSkill.value = true;
 
@@ -500,6 +567,11 @@ const openDownloadDialog = (skill) => {
   activeSkill.value = skill;
   downloadEventReported.value = false;
   downloadVisible.value = true;
+};
+
+const openUpdateLogDialog = (skill) => {
+  activeUpdateLogSkill.value = skill;
+  updateLogVisible.value = true;
 };
 
 const reportSkillDownload = () => {
