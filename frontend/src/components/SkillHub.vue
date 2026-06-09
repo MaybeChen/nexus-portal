@@ -120,7 +120,12 @@
             <el-option v-for="category in skillPublishCategories" :key="category" :label="category" :value="category" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="isEditingSkill" label="更新信息" required>
+        <el-form-item
+          v-if="isEditingSkill"
+          class="create-skill-form__update-logic"
+          label="更新信息"
+          required
+        >
           <el-input v-model.trim="createSkillForm.update_logic" placeholder="输入本次技能更新信息" :rows="4" type="textarea" />
         </el-form-item>
         <el-form-item label="技能包上传" required>
