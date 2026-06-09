@@ -268,7 +268,6 @@ button {
   display: flex;
   width: 100%;
   min-width: 0;
-  min-height: 276px;
   flex-direction: column;
   overflow: hidden;
   padding: 28px 22px 22px;
@@ -373,17 +372,23 @@ button {
 }
 
 
-.skill-card__footer {
+.skill-card__footer,
+.tool-card__footer,
+.model-card__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   min-width: 0;
+  flex-shrink: 0;
   margin-top: auto;
   padding-top: 18px;
+  border-top: 1px solid #eef1f6;
 }
 
-.skill-card__meta {
+.skill-card__meta,
+.tool-card__meta,
+.model-card__meta {
   display: flex;
   align-items: center;
   flex: 1 1 auto;
@@ -395,20 +400,28 @@ button {
   white-space: nowrap;
 }
 
-.skill-card__usage {
+.skill-card__usage,
+.tool-card__usage,
+.model-card__usage {
   display: inline-flex;
   align-items: center;
   flex: 0 0 auto;
   gap: 3px;
 }
 
-.skill-card__usage-icon {
-  color: #c8d0dd;
-  font-size: 13px;
-  line-height: 1;
+.skill-card__usage-icon,
+.tool-card__usage-icon,
+.model-card__usage-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  flex: 0 0 20px;
+  object-fit: contain;
 }
 
-.skill-card__author {
+.skill-card__author,
+.tool-card__author,
+.model-card__author {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -424,7 +437,9 @@ button {
   padding-top: 18px;
 }
 
-.skill-card__footer .skill-card__actions {
+.skill-card__footer .skill-card__actions,
+.tool-card__footer .tool-card__actions,
+.model-card__footer .model-card__actions {
   flex: 0 0 auto;
   justify-content: flex-end;
   gap: 4px;
@@ -433,7 +448,9 @@ button {
   padding-top: 0;
 }
 
-.skill-card__footer .skill-card__actions .el-dropdown {
+.skill-card__footer .skill-card__actions .el-dropdown,
+.tool-card__footer .tool-card__actions .el-dropdown,
+.model-card__footer .model-card__actions .el-dropdown {
   display: inline-flex;
   flex: 0 0 auto;
 }
@@ -451,7 +468,9 @@ button {
 }
 
 .skill-card__footer .skill-card__download,
-.skill-card__footer .skill-card__more {
+.skill-card__footer .skill-card__more,
+.tool-card__footer .tool-card__more,
+.model-card__footer .model-card__more {
   position: relative;
   width: 28px;
   height: 28px;
@@ -465,17 +484,49 @@ button {
 .skill-card__footer .skill-card__download:hover,
 .skill-card__footer .skill-card__download:focus,
 .skill-card__footer .skill-card__more:hover,
-.skill-card__footer .skill-card__more:focus {
+.skill-card__footer .skill-card__more:focus,
+.tool-card__footer .tool-card__more:hover,
+.tool-card__footer .tool-card__more:focus,
+.model-card__footer .model-card__more:hover,
+.model-card__footer .model-card__more:focus {
   border: 0;
   background: transparent;
   box-shadow: none;
 }
 
+.tool-card__footer .tool-card__use {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #2f6ee9;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tool-card__footer .tool-card__use:hover,
+.tool-card__footer .tool-card__use:focus {
+  border: 0;
+  color: #1d4ed8;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tool-card__footer .tool-card__use .el-icon {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}
+
 .skill-card__download-icon,
-.skill-card__more-icon {
+.skill-card__more-icon,
+.tool-card__more-icon,
+.model-card__more-icon {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
 }
 
@@ -500,15 +551,16 @@ button {
   margin-left: 15px;
 }
 
-.skill-card__footer .skill-card__actions .el-button + .el-button {
+.skill-card__footer .skill-card__actions .el-button + .el-button,
+.tool-card__footer .tool-card__actions .el-button + .el-button,
+.model-card__footer .model-card__actions .el-button + .el-button {
   margin-left: 0;
 }
 
 .model-card {
   min-width: 0;
-  min-height: 430px;
   padding-bottom: 28px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .model-card__icon {

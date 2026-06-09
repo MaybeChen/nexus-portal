@@ -2,7 +2,7 @@
   <section class="workspace-panel">
     <div class="workspace-panel__header">
       <div>
-        <p>AI工具</p>
+        <p>工具</p>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateToolDialog">＋ 创建工具</el-button>
     </div>
@@ -15,27 +15,41 @@
           <h3>{{ tool.title || tool.name }}</h3>
           <p>{{ tool.description }}</p>
         </div>
-        <div class="tool-card__actions">
-          <el-button type="success" plain round @click="useTool(tool)">
-            <el-icon><Promotion /></el-icon>
-            <span>使用</span>
-          </el-button>
-          <template v-if="canManageTool(tool)">
-            <el-button type="warning" plain round @click="openUpdateToolDialog(tool)">
-              <el-icon><RefreshRight /></el-icon>
-              <span>更新</span>
+        <div class="tool-card__footer">
+          <div class="tool-card__meta">
+            <span class="tool-card__usage">
+              <img class="tool-card__usage-icon" :src="toolUsageHotIcon" alt="" aria-hidden="true" />
+              {{ formatUsageCount(getToolUsageCount(tool)) }} 次使用
+            </span>
+            <span v-if="getToolAuthorText(tool)" class="tool-card__author" :title="getToolAuthorText(tool)">
+              · {{ getToolAuthorText(tool) }}
+            </span>
+          </div>
+          <div class="tool-card__actions">
+            <el-button class="tool-card__use" aria-label="下载" title="下载" @click="useTool(tool)">
+              <el-icon><Promotion /></el-icon>
             </el-button>
-            <el-button
-              :loading="deletingToolId === getToolId(tool)"
-              type="danger"
-              plain
-              round
-              @click="handleDeleteTool(tool)"
-            >
-              <el-icon><Delete /></el-icon>
-              <span>删除</span>
-            </el-button>
-          </template>
+            <el-dropdown v-if="canManageTool(tool)" trigger="click" placement="bottom-end">
+              <el-button class="tool-card__more" aria-label="更多操作">
+                <img class="tool-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="openUpdateToolDialog(tool)">
+                    <el-icon><RefreshRight /></el-icon>
+                    <span>更新</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    :disabled="Boolean(deletingToolId)"
+                    @click="handleDeleteTool(tool)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    <span>{{ deletingToolId === getToolId(tool) ? '删除中' : '删除' }}</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
       </article>
     </div>
@@ -75,9 +89,11 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, Promotion, RefreshRight } from '@element-plus/icons-vue';
 
-import { AI_TOOL_CREATE, AI_TOOL_DELETE, AI_TOOL_LIST, AI_TOOL_UPDATE } from '@/request/constant';
+import { AI_TOOL_CREATE, AI_TOOL_DELETE, AI_TOOL_LIST, AI_TOOL_UPDATE, AI_TOOL_USED } from '@/request/constant';
 import { get, post } from '@/request/webservice';
 import { useUserStore } from '@/store';
+import moreIcon from '@/assets/more.svg';
+import toolUsageHotIcon from '@/assets/hot.svg';
 
 const userStore = useUserStore();
 const tools = ref([]);
@@ -116,6 +132,62 @@ const normalizeToolList = (data) => (Array.isArray(data) ? data : []);
 const getToolId = (tool = {}) => tool.id || tool._id || '';
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
+const normalizeCount = (value) => {
+  const count = Number(value);
+
+  return Number.isFinite(count) && count > 0 ? count : 0;
+};
+const getDisplayValue = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'object') {
+    return normalizeIdentity(value.name || value.nickname || value.username || value.employeeNumber || value.id || value._id);
+  }
+
+  return normalizeIdentity(value);
+};
+const getToolUsageCount = (tool = {}) => {
+  return normalizeCount(
+    tool.used
+      ?? tool.usageCount
+      ?? tool.usage_count
+      ?? tool.useCount
+      ?? tool.use_count
+      ?? tool.usedCount
+      ?? tool.used_count
+      ?? tool.count
+  );
+};
+const formatUsageCount = (count) => {
+  const normalizedCount = normalizeCount(count);
+
+  if (normalizedCount >= 10000) {
+    const formattedCount = (normalizedCount / 10000).toFixed(1).replace(/\.0$/, '');
+
+    return `${formattedCount}万`;
+  }
+
+  return String(normalizedCount);
+};
+const getToolAuthorText = (tool = {}) => {
+  const author = getDisplayValue(tool.author || tool.authorName || tool.owner || tool.ownerName);
+  const creator = getDisplayValue(tool.creator ?? tool.creatorId ?? tool.createdBy);
+
+  return [author && `@${author}`, creator].filter(Boolean).join(' ');
+};
+const incrementToolUsed = (tool = {}) => {
+  const toolId = getToolId(tool);
+  const nextUsed = getToolUsageCount(tool) + 1;
+  tool.used = nextUsed;
+
+  const matchedTool = tools.value.find((item) => item === tool || (toolId && getToolId(item) === toolId));
+
+  if (matchedTool && matchedTool !== tool) {
+    matchedTool.used = nextUsed;
+  }
+};
 
 const isAdmin = computed(() => ['admin', '管理员'].includes(normalizeRole(userStore.role)));
 const currentUserIdentities = computed(() => {
@@ -250,12 +322,29 @@ const handleDeleteTool = async (tool) => {
   }
 };
 
+const reportToolUsed = (tool = {}) => {
+  const toolId = getToolId(tool);
+
+  if (!toolId) {
+    return;
+  }
+
+  post(AI_TOOL_USED, { id: toolId })
+    .then(() => {
+      incrementToolUsed(tool);
+    })
+    .catch((error) => {
+      console.warn('工具使用次数上报失败', error);
+    });
+};
+
 const useTool = (tool) => {
   if (!tool.link) {
     ElMessage.error('工具地址为空，无法跳转');
     return;
   }
 
+  reportToolUsed(tool);
   window.open(tool.link, '_blank', 'noopener,noreferrer');
 };
 
