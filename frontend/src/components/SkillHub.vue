@@ -215,7 +215,8 @@ const getDisplayValue = (value) => {
 };
 const getSkillUsageCount = (skill = {}) => {
   return normalizeCount(
-    skill.usageCount
+    skill.used
+      ?? skill.usageCount
       ?? skill.usage_count
       ?? skill.useCount
       ?? skill.use_count
@@ -499,7 +500,8 @@ const reportSkillDownload = () => {
   post(SKILL_COUNT, {
     id: getSkillId(skill),
     title: skill.title || '',
-    name: skill.name || ''
+    name: skill.name || '',
+    used: getSkillUsageCount(skill)
   }).catch((error) => {
     console.warn('技能使用次数上报失败', error);
   });
