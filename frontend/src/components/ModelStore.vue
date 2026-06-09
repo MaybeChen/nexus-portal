@@ -25,8 +25,9 @@
         </div>
         <div class="app-key">
           <span>apikey</span>
-          <code>{{ getModelAppKeyDisplayText(model) }}</code>
+          <code :title="getModelAppKeyDisplayText(model)">{{ getModelAppKeyDisplayText(model) }}</code>
           <el-button
+            v-if="getModelAppKey(model)"
             class="model-secret-button"
             aria-label="按住显示 AppKey"
             title="按住显示"
@@ -44,7 +45,13 @@
           >
             <img :src="eyeIcon" alt="" aria-hidden="true" />
           </el-button>
-          <el-button class="model-copy-button" aria-label="复制 AppKey" title="复制" @click="copyAppKey(model)">
+          <el-button
+            v-if="getModelAppKey(model)"
+            class="model-copy-button"
+            aria-label="复制 AppKey"
+            title="复制"
+            @click="copyAppKey(model)"
+          >
             <el-icon><CopyDocument /></el-icon>
           </el-button>
         </div>
@@ -233,6 +240,8 @@ const normalizeModels = (models) => {
     .filter(Boolean);
 };
 
+const MODEL_APP_KEY_NO_PERMISSION_TEXT = '模型只对部门内开放，你还没有权限！';
+
 const getModelItems = (model = {}) => normalizeModels(model.models || model.supportedModels);
 const getModelAppKey = (model = {}) => model.app_key || model.appKey || '';
 const getMaskedAppKey = (model = {}) => '*'.repeat(getModelAppKey(model).length);
@@ -241,7 +250,7 @@ const getModelAppKeyDisplayText = (model = {}) => {
   const appKey = getModelAppKey(model);
 
   if (!appKey) {
-    return '';
+    return MODEL_APP_KEY_NO_PERMISSION_TEXT;
   }
 
   return isAppKeyVisible(model) ? appKey : getMaskedAppKey(model);
