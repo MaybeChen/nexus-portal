@@ -239,6 +239,18 @@ const formatUsageCount = (count) => {
 
   return String(normalizedCount);
 };
+
+const incrementSkillUsed = (skill = {}) => {
+  const skillId = getSkillId(skill);
+  const nextUsed = getSkillUsageCount(skill) + 1;
+  skill.used = nextUsed;
+
+  const matchedSkill = skills.value.find((item) => item === skill || (skillId && getSkillId(item) === skillId));
+
+  if (matchedSkill && matchedSkill !== skill) {
+    matchedSkill.used = nextUsed;
+  }
+};
 const getSkillAuthorText = (skill = {}) => {
   const author = getDisplayValue(skill.author || skill.authorName || skill.owner || skill.ownerName);
   const creator = getDisplayValue(skill.creator ?? skill.creatorId ?? skill.createdBy);
@@ -502,9 +514,13 @@ const reportSkillDownload = () => {
     title: skill.title || '',
     name: skill.name || '',
     used: getSkillUsageCount(skill)
-  }).catch((error) => {
-    console.warn('技能使用次数上报失败', error);
-  });
+  })
+    .then(() => {
+      incrementSkillUsed(skill);
+    })
+    .catch((error) => {
+      console.warn('技能使用次数上报失败', error);
+    });
 };
 
 const downloadFile = (file) => {
