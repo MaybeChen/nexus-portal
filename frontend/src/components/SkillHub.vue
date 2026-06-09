@@ -79,7 +79,15 @@
       <el-empty v-else description="该技能暂无可下载文件" />
     </el-dialog>
 
-    <el-dialog v-model="updateLogVisible" :title="`${activeUpdateLogSkill?.title || activeUpdateLogSkill?.name || '技能'} 更新详情`" width="560px" append-to-body align-center>
+    <el-dialog
+      v-model="updateLogVisible"
+      :title="`${activeUpdateLogSkill?.title || activeUpdateLogSkill?.name || '技能'} 更新详情`"
+      width="560px"
+      append-to-body
+      align-center
+      class="skill-update-dialog"
+      body-class="skill-update-dialog__body"
+    >
       <el-timeline v-if="activeSkillUpdateLogs.length" class="skill-update-timeline">
         <el-timeline-item
           v-for="(item, index) in activeSkillUpdateLogs"
@@ -100,6 +108,9 @@
         </el-form-item>
         <el-form-item label="技能名称" required>
           <el-input v-model.trim="createSkillForm.name" placeholder="skill的真实名称，如pptx-craft" />
+        </el-form-item>
+        <el-form-item v-if="isEditingSkill" label="更新信息" required>
+          <el-input v-model.trim="createSkillForm.update_logic" placeholder="输入本次技能更新信息" :rows="4" type="textarea" />
         </el-form-item>
         <el-form-item label="描述" required>
           <el-input v-model.trim="createSkillForm.description" placeholder="输入技能描述" :rows="4" type="textarea" />
