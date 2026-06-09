@@ -109,6 +109,9 @@
         <el-form-item label="技能名称" required>
           <el-input v-model.trim="createSkillForm.name" placeholder="skill的真实名称，如pptx-craft" />
         </el-form-item>
+        <el-form-item v-if="isEditingSkill" label="更新信息" required>
+          <el-input v-model.trim="createSkillForm.update_logic" placeholder="输入本次技能更新信息" :rows="4" type="textarea" />
+        </el-form-item>
         <el-form-item label="描述" required>
           <el-input v-model.trim="createSkillForm.description" placeholder="输入技能描述" :rows="4" type="textarea" />
         </el-form-item>
