@@ -136,8 +136,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, RefreshRight } from '@element-plus/icons-vue';
 
-import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
-import { reportBusinessEvent } from '@/request/service';
+import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_COUNT, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
 import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import downloadHighIcon from '@/assets/download_high.svg';
@@ -195,7 +194,6 @@ const downloadFiles = computed(() => activeSkill.value?.files || []);
 const normalizeSkillList = (data) => (Array.isArray(data) ? data : []);
 const getSkillId = (skill = {}) => skill.id || skill._id || '';
 const getFileId = (file = {}) => file.id || file.fileId || '';
-const getSkillReportLogic = (skill = {}) => [getSkillId(skill), skill.title || '', skill.name || ''].join('|');
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
@@ -496,9 +494,14 @@ const reportSkillDownload = () => {
     return;
   }
 
+  const skill = activeSkill.value || {};
   downloadEventReported.value = true;
-  reportBusinessEvent('skill', getSkillReportLogic(activeSkill.value)).catch((error) => {
-    console.warn('技能下载事件上报失败', error);
+  post(SKILL_COUNT, {
+    id: getSkillId(skill),
+    title: skill.title || '',
+    name: skill.name || ''
+  }).catch((error) => {
+    console.warn('技能使用次数上报失败', error);
   });
 };
 
