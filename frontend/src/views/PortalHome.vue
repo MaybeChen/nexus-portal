@@ -61,9 +61,9 @@ const navigationIcons = {
 
 const activeSection = ref('skillhub');
 const navigationItems = [
-  { key: 'skillhub', title: 'Skill Hub' },
-  { key: 'ai-tools', title: 'AI工具' },
-  { key: 'model-store', title: '模型商店' }
+  { key: 'skillhub', title: '技能' },
+  { key: 'ai-tools', title: '工具' },
+  { key: 'model-store', title: '模型' }
 ];
 
 const userStore = useUserStore();

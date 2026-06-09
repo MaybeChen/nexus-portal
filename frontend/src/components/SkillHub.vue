@@ -2,12 +2,12 @@
   <section class="workspace-panel">
     <div class="workspace-panel__header">
       <div>
-        <p>Skill Hub</p>
+        <p>技能</p>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
     </div>
 
-    <div v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
+    <div v-if="loadingSkills || skills.length > 0" v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
       <article v-for="skill in skills" :key="skill.id || skill.name" class="asset-card skill-card">
         <el-tag class="skill-card__type" type="primary" effect="light">{{ skill.type || '未分类' }}</el-tag>
         <div class="skill-card__content">
@@ -18,7 +18,7 @@
         <div class="skill-card__footer">
           <div class="skill-card__meta">
             <span class="skill-card__usage">
-              <span class="skill-card__usage-icon" aria-hidden="true">♨</span>
+              <img class="skill-card__usage-icon" :src="skillUsageHotIcon" alt="" aria-hidden="true" />
               {{ formatUsageCount(getSkillUsageCount(skill)) }} 次使用
             </span>
             <span v-if="getSkillAuthorText(skill)" class="skill-card__author" :title="getSkillAuthorText(skill)">
@@ -26,7 +26,7 @@
             </span>
           </div>
           <div class="skill-card__actions">
-            <el-button class="skill-card__download" aria-label="下载" @click="openDownloadDialog(skill)">
+            <el-button class="skill-card__download" aria-label="下载" title="下载" @click="openDownloadDialog(skill)">
               <img class="skill-card__download-icon skill-card__download-icon--normal" :src="downloadNormalIcon" alt="" aria-hidden="true" />
               <img class="skill-card__download-icon skill-card__download-icon--high" :src="downloadHighIcon" alt="" aria-hidden="true" />
             </el-button>
@@ -55,7 +55,7 @@
       </article>
     </div>
 
-    <el-empty v-if="!loadingSkills && skills.length === 0" description="暂无技能资产" />
+    <el-empty v-if="!loadingSkills && skills.length === 0" class="asset-empty" description="暂无技能资产" />
 
     <el-dialog v-model="downloadVisible" :title="`${activeSkill?.title || activeSkill?.name || '技能'} 文件列表`" width="520px" append-to-body align-center>
       <div v-if="downloadFiles.length" class="download-file-list">
@@ -136,13 +136,13 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, RefreshRight } from '@element-plus/icons-vue';
 
-import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
-import { reportBusinessEvent } from '@/request/service';
+import { CREATESKILL, FILE_DELETE, FILE_DOWNLOAD, FILE_UPLOAD, SKILL_COUNT, SKILL_DELETE, SKILL_LIST, SKILL_UPDATE } from '@/request/constant';
 import { download, get, post, upload } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import downloadHighIcon from '@/assets/download_high.svg';
 import downloadNormalIcon from '@/assets/download_normal.svg';
 import moreIcon from '@/assets/more.svg';
+import skillUsageHotIcon from '@/assets/hot.svg';
 
 const userStore = useUserStore();
 const skills = ref([]);
@@ -194,7 +194,6 @@ const downloadFiles = computed(() => activeSkill.value?.files || []);
 const normalizeSkillList = (data) => (Array.isArray(data) ? data : []);
 const getSkillId = (skill = {}) => skill.id || skill._id || '';
 const getFileId = (file = {}) => file.id || file.fileId || '';
-const getSkillReportLogic = (skill = {}) => [getSkillId(skill), skill.title || '', skill.name || ''].join('|');
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
 const normalizeFiles = (files) => (Array.isArray(files) ? files.map((file) => ({ ...file })) : []);
@@ -216,7 +215,8 @@ const getDisplayValue = (value) => {
 };
 const getSkillUsageCount = (skill = {}) => {
   return normalizeCount(
-    skill.usageCount
+    skill.used
+      ?? skill.usageCount
       ?? skill.usage_count
       ?? skill.useCount
       ?? skill.use_count
@@ -238,6 +238,18 @@ const formatUsageCount = (count) => {
   }
 
   return String(normalizedCount);
+};
+
+const incrementSkillUsed = (skill = {}) => {
+  const skillId = getSkillId(skill);
+  const nextUsed = getSkillUsageCount(skill) + 1;
+  skill.used = nextUsed;
+
+  const matchedSkill = skills.value.find((item) => item === skill || (skillId && getSkillId(item) === skillId));
+
+  if (matchedSkill && matchedSkill !== skill) {
+    matchedSkill.used = nextUsed;
+  }
 };
 const getSkillAuthorText = (skill = {}) => {
   const author = getDisplayValue(skill.author || skill.authorName || skill.owner || skill.ownerName);
@@ -495,10 +507,20 @@ const reportSkillDownload = () => {
     return;
   }
 
+  const skill = activeSkill.value || {};
   downloadEventReported.value = true;
-  reportBusinessEvent('skill', getSkillReportLogic(activeSkill.value)).catch((error) => {
-    console.warn('技能下载事件上报失败', error);
-  });
+  post(SKILL_COUNT, {
+    id: getSkillId(skill),
+    title: skill.title || '',
+    name: skill.name || '',
+    used: getSkillUsageCount(skill)
+  })
+    .then(() => {
+      incrementSkillUsed(skill);
+    })
+    .catch((error) => {
+      console.warn('技能使用次数上报失败', error);
+    });
 };
 
 const downloadFile = (file) => {
