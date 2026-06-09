@@ -19,17 +19,15 @@
         <div class="model-url">
           <span>调用 URL</span>
           <code>{{ getModelUrl(model) || '暂无地址' }}</code>
-          <el-button size="small" type="primary" plain @click="copyModelUrl(getModelUrl(model))">
+          <el-button class="model-copy-button" aria-label="复制调用 URL" title="复制" @click="copyModelUrl(getModelUrl(model))">
             <el-icon><CopyDocument /></el-icon>
-            <span>复制</span>
           </el-button>
         </div>
         <div class="app-key">
           <span>apikey</span>
           <code>{{ getModelAppKey(model) }}</code>
-          <el-button size="small" type="primary" plain @click="copyAppKey(model)">
+          <el-button class="model-copy-button" aria-label="复制 AppKey" title="复制" @click="copyAppKey(model)">
             <el-icon><CopyDocument /></el-icon>
-            <span>复制</span>
           </el-button>
         </div>
         <div class="model-card__footer">
