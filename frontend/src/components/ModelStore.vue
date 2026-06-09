@@ -2,7 +2,7 @@
   <section class="workspace-panel">
     <div class="workspace-panel__header">
       <div>
-        <p>模型商店</p>
+        <p>模型</p>
       </div>
       <el-button class="primary-action" type="primary" round @click="openCreateModelDialog">＋ 增加模型</el-button>
     </div>
@@ -27,26 +27,43 @@
         <div class="app-key">
           <span>apikey</span>
           <code>{{ getModelAppKey(model) }}</code>
-          <el-button size="small" type="primary" plain @click="copyAppKey(getModelAppKey(model))">
+          <el-button size="small" type="primary" plain @click="copyAppKey(model)">
             <el-icon><CopyDocument /></el-icon>
             <span>复制</span>
           </el-button>
         </div>
-        <div class="model-card__actions" v-if="canManageModel(model)">
-          <el-button type="warning" plain round @click="openUpdateModelDialog(model)">
-            <el-icon><RefreshRight /></el-icon>
-            <span>更新</span>
-          </el-button>
-          <el-button
-            :loading="deletingModelId === getModelId(model)"
-            type="danger"
-            plain
-            round
-            @click="handleDeleteModel(model)"
-          >
-            <el-icon><Delete /></el-icon>
-            <span>删除</span>
-          </el-button>
+        <div class="model-card__footer">
+          <div class="model-card__meta">
+            <span class="model-card__usage">
+              <img class="model-card__usage-icon" :src="modelUsageHotIcon" alt="" aria-hidden="true" />
+              {{ formatUsageCount(getModelUsageCount(model)) }} 次使用
+            </span>
+            <span v-if="getModelAuthorText(model)" class="model-card__author" :title="getModelAuthorText(model)">
+              · {{ getModelAuthorText(model) }}
+            </span>
+          </div>
+          <div class="model-card__actions" v-if="canManageModel(model)">
+            <el-dropdown trigger="click" placement="bottom-end">
+              <el-button class="model-card__more" aria-label="更多操作">
+                <img class="model-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="openUpdateModelDialog(model)">
+                    <el-icon><RefreshRight /></el-icon>
+                    <span>更新</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    :disabled="Boolean(deletingModelId)"
+                    @click="handleDeleteModel(model)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    <span>{{ deletingModelId === getModelId(model) ? '删除中' : '删除' }}</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </div>
       </article>
     </div>
@@ -87,9 +104,11 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { CopyDocument, Delete, RefreshRight } from '@element-plus/icons-vue';
 
-import { MODEL_CREATE, MODEL_DELETE, MODEL_STORE_LIST, MODEL_UPDATE } from '@/request/constant';
+import { MODEL_CREATE, MODEL_DELETE, MODEL_STORE_LIST, MODEL_UPDATE, MODEL_USED } from '@/request/constant';
 import { get, post } from '@/request/webservice';
 import { useUserStore } from '@/store';
+import moreIcon from '@/assets/more.svg';
+import modelUsageHotIcon from '@/assets/hot.svg';
 
 const userStore = useUserStore();
 const models = ref([]);
@@ -129,6 +148,62 @@ const normalizeModelList = (data) => (Array.isArray(data) ? data : []);
 const getModelId = (model = {}) => model.id || model._id || '';
 const normalizeIdentity = (value) => String(value ?? '').trim();
 const normalizeRole = (value) => normalizeIdentity(value).toLowerCase();
+const normalizeCount = (value) => {
+  const count = Number(value);
+
+  return Number.isFinite(count) && count > 0 ? count : 0;
+};
+const getDisplayValue = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'object') {
+    return normalizeIdentity(value.name || value.nickname || value.username || value.employeeNumber || value.id || value._id);
+  }
+
+  return normalizeIdentity(value);
+};
+const getModelUsageCount = (model = {}) => {
+  return normalizeCount(
+    model.used
+      ?? model.usageCount
+      ?? model.usage_count
+      ?? model.useCount
+      ?? model.use_count
+      ?? model.usedCount
+      ?? model.used_count
+      ?? model.count
+  );
+};
+const formatUsageCount = (count) => {
+  const normalizedCount = normalizeCount(count);
+
+  if (normalizedCount >= 10000) {
+    const formattedCount = (normalizedCount / 10000).toFixed(1).replace(/\.0$/, '');
+
+    return `${formattedCount}万`;
+  }
+
+  return String(normalizedCount);
+};
+const getModelAuthorText = (model = {}) => {
+  const author = getDisplayValue(model.author || model.authorName || model.owner || model.ownerName);
+  const creator = getDisplayValue(model.creator ?? model.creatorId ?? model.createdBy);
+
+  return [author && `@${author}`, creator].filter(Boolean).join(' ');
+};
+const incrementModelUsed = (model = {}) => {
+  const modelId = getModelId(model);
+  const nextUsed = getModelUsageCount(model) + 1;
+  model.used = nextUsed;
+
+  const matchedModel = models.value.find((item) => item === model || (modelId && getModelId(item) === modelId));
+
+  if (matchedModel && matchedModel !== model) {
+    matchedModel.used = nextUsed;
+  }
+};
 const normalizeModels = (models) => {
   if (Array.isArray(models)) {
     return models.map(normalizeIdentity).filter(Boolean);
@@ -281,7 +356,7 @@ const handleDeleteModel = async (model) => {
 const copyText = async (text, emptyMessage, successMessage) => {
   if (!text) {
     ElMessage.error(emptyMessage);
-    return;
+    return false;
   }
 
   if (navigator.clipboard?.writeText) {
@@ -298,11 +373,34 @@ const copyText = async (text, emptyMessage, successMessage) => {
   }
 
   ElMessage.success(successMessage);
+  return true;
+};
+
+const reportModelUsed = (model = {}) => {
+  const modelId = getModelId(model);
+
+  if (!modelId) {
+    return;
+  }
+
+  post(MODEL_USED, { id: modelId })
+    .then(() => {
+      incrementModelUsed(model);
+    })
+    .catch((error) => {
+      console.warn('模型使用次数上报失败', error);
+    });
 };
 
 const copyModelUrl = (url) => copyText(url, '调用 URL 为空，无法复制', '调用 URL 已复制');
 
-const copyAppKey = (appKey) => copyText(appKey, 'AppKey 为空，无法复制', 'AppKey 已复制');
+const copyAppKey = async (model) => {
+  const copied = await copyText(getModelAppKey(model), 'AppKey 为空，无法复制', 'AppKey 已复制');
+
+  if (copied) {
+    reportModelUsed(model);
+  }
+};
 
 onMounted(loadModels);
 </script>
