@@ -191,7 +191,7 @@ const getModelAuthorText = (model = {}) => {
   const author = getDisplayValue(model.author || model.authorName || model.owner || model.ownerName);
   const creator = getDisplayValue(model.creator ?? model.creatorId ?? model.createdBy);
 
-  return author || creator;
+  return [author && `@${author}`, creator].filter(Boolean).join(' ');
 };
 const incrementModelUsed = (model = {}) => {
   const modelId = getModelId(model);

@@ -176,7 +176,7 @@ const getToolAuthorText = (tool = {}) => {
   const author = getDisplayValue(tool.author || tool.authorName || tool.owner || tool.ownerName);
   const creator = getDisplayValue(tool.creator ?? tool.creatorId ?? tool.createdBy);
 
-  return author || creator;
+  return [author && `@${author}`, creator].filter(Boolean).join(' ');
 };
 const incrementToolUsed = (tool = {}) => {
   const toolId = getToolId(tool);
