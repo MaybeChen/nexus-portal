@@ -26,7 +26,7 @@
             </span>
           </div>
           <div class="tool-card__actions">
-            <el-button class="tool-card__use" aria-label="下载" title="下载" @click="useTool(tool)">
+            <el-button class="tool-card__use" aria-label="使用" title="使用" @click="useTool(tool)">
               <el-icon><Promotion /></el-icon>
             </el-button>
             <el-dropdown v-if="canManageTool(tool)" trigger="click" placement="bottom-end">
