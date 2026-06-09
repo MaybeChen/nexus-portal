@@ -27,7 +27,8 @@
           </div>
           <div class="tool-card__actions">
             <el-button class="tool-card__use" aria-label="使用" title="使用" @click="useTool(tool)">
-              <el-icon><Promotion /></el-icon>
+              <img class="tool-card__use-icon tool-card__use-icon--normal" :src="startNormalIcon" alt="" aria-hidden="true" />
+              <img class="tool-card__use-icon tool-card__use-icon--high" :src="startHighIcon" alt="" aria-hidden="true" />
             </el-button>
             <el-dropdown v-if="canManageTool(tool)" trigger="click" placement="bottom-end">
               <el-button class="tool-card__more" aria-label="更多操作">
@@ -87,13 +88,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Delete, Promotion, RefreshRight } from '@element-plus/icons-vue';
+import { Delete, RefreshRight } from '@element-plus/icons-vue';
 
 import { AI_TOOL_CREATE, AI_TOOL_DELETE, AI_TOOL_LIST, AI_TOOL_UPDATE, AI_TOOL_USED } from '@/request/constant';
 import { get, post } from '@/request/webservice';
 import { useUserStore } from '@/store';
 import moreIcon from '@/assets/more.svg';
 import toolUsageHotIcon from '@/assets/hot.svg';
+import startNormalIcon from '@/assets/start_normal.svg';
+import startHighIcon from '@/assets/start_high.svg';
 
 const userStore = useUserStore();
 const tools = ref([]);

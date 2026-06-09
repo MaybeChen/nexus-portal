@@ -337,7 +337,6 @@ button {
 }
 
 .skill-card {
-  min-height: 276px;
   padding: 30px 28px 24px;
 }
 
@@ -381,7 +380,7 @@ button {
   gap: 14px;
   min-width: 0;
   flex-shrink: 0;
-  margin-top: auto;
+  margin-top: 28px;
   padding-top: 18px;
   border-top: 1px solid #eef1f6;
 }
@@ -501,7 +500,6 @@ button {
   padding: 0;
   border: 0;
   border-radius: 0;
-  color: #2f6ee9;
   background: transparent;
   box-shadow: none;
 }
@@ -509,15 +507,29 @@ button {
 .tool-card__footer .tool-card__use:hover,
 .tool-card__footer .tool-card__use:focus {
   border: 0;
-  color: #1d4ed8;
   background: transparent;
   box-shadow: none;
 }
 
-.tool-card__footer .tool-card__use .el-icon {
+.tool-card__use-icon {
+  display: block;
   width: 20px;
   height: 20px;
-  font-size: 20px;
+  object-fit: contain;
+}
+
+.tool-card__use-icon--high {
+  display: none;
+}
+
+.tool-card__use:hover .tool-card__use-icon--normal,
+.tool-card__use:focus .tool-card__use-icon--normal {
+  display: none;
+}
+
+.tool-card__use:hover .tool-card__use-icon--high,
+.tool-card__use:focus .tool-card__use-icon--high {
+  display: block;
 }
 
 .skill-card__download-icon,
