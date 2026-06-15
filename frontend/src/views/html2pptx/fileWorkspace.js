@@ -19,7 +19,10 @@ const KNOWN_ASSET_MAPPINGS = [
   }
 ];
 
-const PUBLIC_ASSET_ROOT = 'assets/';
+// Files in frontend/public are emitted directly under Vite's BASE_URL.
+// Do not add an "assets/" segment here; that directory is reserved for
+// bundled build assets and is not where these copied public files live.
+const PUBLIC_ASSET_ROOT = '';
 const PUBLIC_ASSET_FILENAMES = new Set([
   'all.min.css',
   'echarts.min.js',
@@ -27,6 +30,7 @@ const PUBLIC_ASSET_FILENAMES = new Set([
   'fa-regular-400.woff2',
   'fa-solid-900.woff2',
   'fonts.css',
+  'logo.png',
   'NotoSansSC-Bold.otf',
   'NotoSansSC-Bold.ttf',
   'NotoSansSC-Light.otf',
@@ -93,10 +97,15 @@ function getPublicBaseUrl() {
   return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 }
 
-function resolvePublicAssetUrl(rawUrl) {
+export function getPublicAssetRootUrl(baseUrl = getPublicBaseUrl()) {
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${normalizedBase}${PUBLIC_ASSET_ROOT}`;
+}
+
+export function resolvePublicAssetUrl(rawUrl, baseUrl = getPublicBaseUrl()) {
   const filename = getAssetFilename(rawUrl);
   if (!filename || !PUBLIC_ASSET_FILENAMES.has(filename)) return null;
-  return preserveQueryAndHash(rawUrl, `${getPublicBaseUrl()}${PUBLIC_ASSET_ROOT}${filename}`);
+  return preserveQueryAndHash(rawUrl, `${getPublicAssetRootUrl(baseUrl)}${filename}`);
 }
 
 function getWorkspaceAsset(fileMap, assetPath) {
@@ -158,8 +167,83 @@ function rewriteUrl(rawUrl, basePath, fileMap, warnings, label) {
   return rawUrl;
 }
 
+function splitCssCommaList(value) {
+  const parts = [];
+  let start = 0;
+  let depth = 0;
+  let quote = '';
+
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (quote) {
+      if (char === quote && value[index - 1] !== '\\') quote = '';
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === '(') {
+      depth += 1;
+    } else if (char === ')') {
+      depth = Math.max(0, depth - 1);
+    } else if (char === ',' && depth === 0) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+
+function isUnavailableFontAwesomeSource(source, cssPath, fileMap) {
+  const url = source.match(/url\((['"]?)(.*?)\1\)/i)?.[2];
+  if (
+    !url ||
+    !/(?:fa-(?:brands-400|regular-400|solid-900)\.ttf|fa-v4compatibility\.(?:woff2|ttf))(?:[?#]|$)/i.test(
+      url
+    )
+  ) {
+    return false;
+  }
+  const assetPath = resolveRelativePath(cssPath, url, fileMap);
+  return !assetPath || !getWorkspaceAsset(fileMap, assetPath);
+}
+
+export function removeUnavailableFontFallbacks(cssText, cssPath = '', fileMap = new Map()) {
+  const filterSourceDeclaration = (full, prefix, sourceList, suffix, removeWhenEmpty) => {
+    const sources = splitCssCommaList(sourceList);
+    const availableSources = sources.filter(
+      (source) => !isUnavailableFontAwesomeSource(source, cssPath, fileMap)
+    );
+    return availableSources.length > 0
+      ? `${prefix}${availableSources.join(', ')}${suffix}`
+      : removeWhenEmpty
+        ? ''
+        : full;
+  };
+
+  const withoutEmptyFontFaces = String(cssText || '').replace(/@font-face\s*{[^}]*}/gi, (fontFace) => {
+    let hadSource = false;
+    const filteredFontFace = fontFace.replace(
+      /(src\s*:\s*)([^;]+)(;)/gi,
+      (full, prefix, sourceList, suffix) => {
+        hadSource = true;
+        return filterSourceDeclaration(full, prefix, sourceList, suffix, true);
+      }
+    );
+    return hadSource && !/\bsrc\s*:/i.test(filteredFontFace) ? '' : filteredFontFace;
+  });
+
+  return withoutEmptyFontFaces.replace(
+    /(src\s*:\s*)([^;]+)(;)/gi,
+    (full, prefix, sourceList, suffix) =>
+      filterSourceDeclaration(full, prefix, sourceList, suffix, false)
+  );
+}
+
 function rewriteCssUrls(cssText, cssPath, fileMap, warnings) {
-  return String(cssText || '').replace(/url\((['"]?)(.*?)\1\)/gi, (full, quote, rawUrl) => {
+  const filteredCss = removeUnavailableFontFallbacks(cssText, cssPath, fileMap);
+  return filteredCss.replace(/url\((['"]?)(.*?)\1\)/gi, (full, quote, rawUrl) => {
     const rewrittenUrl = rewriteUrl(String(rawUrl || '').trim(), cssPath, fileMap, warnings, '样式资源');
     return rewrittenUrl === rawUrl ? full : `url(${quote}${rewrittenUrl}${quote})`;
   });
@@ -191,7 +275,19 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
     if (!asset?.file) {
       const publicUrl = resolvePublicAssetUrl(rawUrl);
       if (publicUrl) {
-        link.setAttribute('href', publicUrl);
+        try {
+          const response = await fetch(publicUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const cssText = await response.text();
+          const rewrittenCss = rewriteCssUrls(cssText, publicUrl, fileMap, warnings);
+          const cssUrl = URL.createObjectURL(new Blob([rewrittenCss], { type: 'text/css' }));
+          transientUrls.push(cssUrl);
+          link.setAttribute('href', cssUrl);
+        } catch {
+          // Keep the public stylesheet URL as a fallback. This still works when
+          // the stylesheet already references files from the public root.
+          link.setAttribute('href', publicUrl);
+        }
       } else if (cssPath) {
         warnings.add(`未找到样式表：${rawUrl}`);
       }
