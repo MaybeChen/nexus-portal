@@ -93,10 +93,17 @@ function getPublicBaseUrl() {
   return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
 }
 
+export function getPublicAssetRootUrl(baseUrl = getPublicBaseUrl()) {
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return /\/assets\/$/i.test(normalizedBase)
+    ? normalizedBase
+    : `${normalizedBase}${PUBLIC_ASSET_ROOT}`;
+}
+
 function resolvePublicAssetUrl(rawUrl) {
   const filename = getAssetFilename(rawUrl);
   if (!filename || !PUBLIC_ASSET_FILENAMES.has(filename)) return null;
-  return preserveQueryAndHash(rawUrl, `${getPublicBaseUrl()}${PUBLIC_ASSET_ROOT}${filename}`);
+  return preserveQueryAndHash(rawUrl, `${getPublicAssetRootUrl()}${filename}`);
 }
 
 function getWorkspaceAsset(fileMap, assetPath) {

@@ -11,6 +11,7 @@ import {
 } from '../utils.js';
 import { getProcessedImage } from '../image-processor.js';
 import { PX_TO_INCH } from '../constants.js';
+import { isIconElement, prepareElementImageItem } from './element-capture.js';
 
 export function prepareTextNode(node, config, domOrder, effectiveZIndex, globalOptions = {}) {
   const textContent = node.nodeValue.trim();
@@ -165,7 +166,45 @@ export function prepareTableItem(node, context) {
   }
 
   tableItems.push(...createTableBorderOverlayItems(node, context));
-  return { items: tableItems, stopRecursion: true };
+
+  // Native PowerPoint tables can only contain text runs, not inline images.
+  // Render icon-font elements separately above the editable table and omit the
+  // corresponding private-use glyph from the cell text.
+  const iconJobs = [];
+  const iconElements = Array.from(node.querySelectorAll('i, span')).filter(isIconElement);
+  iconElements.forEach((iconNode, iconIndex) => {
+    const iconRect = iconNode.getBoundingClientRect();
+    if (iconRect.width < 0.5 || iconRect.height < 0.5) return;
+
+    const iconX =
+      config.offX + (iconRect.left - config.rootX) * PX_TO_INCH * config.scale;
+    const iconY =
+      config.offY + (iconRect.top - config.rootY) * PX_TO_INCH * config.scale;
+    const iconW = iconRect.width * PX_TO_INCH * config.scale;
+    const iconH = iconRect.height * PX_TO_INCH * config.scale;
+    const iconResult = prepareElementImageItem(
+      iconNode,
+      parentSortKey.concat([0, 1]),
+      domOrder + (iconIndex + 1) / 1000,
+      iconX,
+      iconY,
+      iconW,
+      iconH,
+      iconRect.width,
+      iconRect.height,
+      0
+    );
+    tableItems.push(...iconResult.items);
+    if (iconResult.job) iconJobs.push(iconResult.job);
+  });
+
+  const job =
+    iconJobs.length > 0
+      ? async () => {
+          await Promise.all(iconJobs.map((iconJob) => iconJob()));
+        }
+      : null;
+  return { items: tableItems, job, stopRecursion: true };
 }
 
 export function prepareCanvasItem(node, context) {
