@@ -1,5 +1,6 @@
 import { exportToPptx } from './dom-to-pptx/src/index.js';
 import { readHtmlDocument, revokeWorkspaceUrls } from './fileWorkspace';
+import { injectIframeWarningFilter } from './runtime-warning-utils.js';
 
 const EXPORT_OPTIONS = {
   autoEmbedFonts: true,
@@ -96,7 +97,7 @@ async function createExportIframe(html, stage) {
   iframe.style.cssText = 'display: block; width: 1600px; height: 900px; border: 0;';
   stage.appendChild(iframe);
   const loaded = waitForIframe(iframe);
-  iframe.srcdoc = html;
+  iframe.srcdoc = injectIframeWarningFilter(html);
   await loaded;
   return iframe;
 }
