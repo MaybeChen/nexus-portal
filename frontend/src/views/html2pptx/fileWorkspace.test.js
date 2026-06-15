@@ -56,3 +56,34 @@ test('keeps a Font Awesome TTF fallback when it exists in the uploaded workspace
 
   assert.equal(removeUnavailableFontFallbacks(css, 'styles/all.min.css', fileMap), css);
 });
+
+test('removes the unavailable Font Awesome solid TTF fallback', () => {
+  const css = `
+    @font-face {
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      src: url("./fa-solid-900.woff2") format("woff2"),
+           url("./fa-solid-900.ttf") format("truetype");
+    }
+  `;
+  const rewritten = removeUnavailableFontFallbacks(css);
+
+  assert.match(rewritten, /fa-solid-900\.woff2/);
+  assert.doesNotMatch(rewritten, /fa-solid-900\.ttf/);
+});
+
+test('removes an empty v4 compatibility font face when no source exists', () => {
+  const css = `
+    @font-face {
+      font-family: "FontAwesome";
+      src: url("./fa-v4compatibility.woff2") format("woff2"),
+           url("./fa-v4compatibility.ttf") format("truetype");
+    }
+    .fa { display: inline-block; }
+  `;
+  const rewritten = removeUnavailableFontFallbacks(css);
+
+  assert.doesNotMatch(rewritten, /fa-v4compatibility/);
+  assert.doesNotMatch(rewritten, /@font-face/);
+  assert.match(rewritten, /\.fa\s*{/);
+});

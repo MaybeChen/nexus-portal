@@ -195,23 +195,50 @@ function splitCssCommaList(value) {
   return parts.filter(Boolean);
 }
 
-function isUnavailableFontAwesomeTtf(source, cssPath, fileMap) {
+function isUnavailableFontAwesomeSource(source, cssPath, fileMap) {
   const url = source.match(/url\((['"]?)(.*?)\1\)/i)?.[2];
-  if (!url || !/fa-(?:brands|regular|solid)-400\.ttf(?:[?#]|$)/i.test(url)) return false;
+  if (
+    !url ||
+    !/(?:fa-(?:brands-400|regular-400|solid-900)\.ttf|fa-v4compatibility\.(?:woff2|ttf))(?:[?#]|$)/i.test(
+      url
+    )
+  ) {
+    return false;
+  }
   const assetPath = resolveRelativePath(cssPath, url, fileMap);
   return !assetPath || !getWorkspaceAsset(fileMap, assetPath);
 }
 
 export function removeUnavailableFontFallbacks(cssText, cssPath = '', fileMap = new Map()) {
-  return String(cssText || '').replace(/(src\s*:\s*)([^;]+)(;)/gi, (full, prefix, sourceList, suffix) => {
+  const filterSourceDeclaration = (full, prefix, sourceList, suffix, removeWhenEmpty) => {
     const sources = splitCssCommaList(sourceList);
     const availableSources = sources.filter(
-      (source) => !isUnavailableFontAwesomeTtf(source, cssPath, fileMap)
+      (source) => !isUnavailableFontAwesomeSource(source, cssPath, fileMap)
     );
     return availableSources.length > 0
       ? `${prefix}${availableSources.join(', ')}${suffix}`
-      : full;
+      : removeWhenEmpty
+        ? ''
+        : full;
+  };
+
+  const withoutEmptyFontFaces = String(cssText || '').replace(/@font-face\s*{[^}]*}/gi, (fontFace) => {
+    let hadSource = false;
+    const filteredFontFace = fontFace.replace(
+      /(src\s*:\s*)([^;]+)(;)/gi,
+      (full, prefix, sourceList, suffix) => {
+        hadSource = true;
+        return filterSourceDeclaration(full, prefix, sourceList, suffix, true);
+      }
+    );
+    return hadSource && !/\bsrc\s*:/i.test(filteredFontFace) ? '' : filteredFontFace;
   });
+
+  return withoutEmptyFontFaces.replace(
+    /(src\s*:\s*)([^;]+)(;)/gi,
+    (full, prefix, sourceList, suffix) =>
+      filterSourceDeclaration(full, prefix, sourceList, suffix, false)
+  );
 }
 
 function rewriteCssUrls(cssText, cssPath, fileMap, warnings) {
