@@ -1,7 +1,7 @@
 import { PX_TO_INCH } from './constants.js';
 import { prepareRenderItem } from './rendering/render-item.js';
 
-function compareKeys(keyA = [], keyB = []) {
+export function compareKeys(keyA = [], keyB = []) {
   const safeKeyA = Array.isArray(keyA) ? keyA : [];
   const safeKeyB = Array.isArray(keyB) ? keyB : [];
   const len = Math.max(safeKeyA.length, safeKeyB.length);
@@ -11,6 +11,29 @@ function compareKeys(keyA = [], keyB = []) {
     if (valA !== valB) return valA - valB;
   }
   return 0;
+}
+
+function isVisuallyOverflowing(node, style) {
+  if (!node?.parentElement || !style) return false;
+  const parentStyle = node.ownerDocument.defaultView.getComputedStyle(node.parentElement);
+  if (
+    parentStyle.overflowX === 'hidden' ||
+    parentStyle.overflowX === 'clip' ||
+    parentStyle.overflowY === 'hidden' ||
+    parentStyle.overflowY === 'clip'
+  ) {
+    return false;
+  }
+
+  const rect = node.getBoundingClientRect();
+  const parentRect = node.parentElement.getBoundingClientRect();
+  const tolerance = 0.5;
+  return (
+    rect.left < parentRect.left - tolerance ||
+    rect.top < parentRect.top - tolerance ||
+    rect.right > parentRect.right + tolerance ||
+    rect.bottom > parentRect.bottom + tolerance
+  );
 }
 
 function getStackingContextLevel(style) {
@@ -132,8 +155,12 @@ export async function processSlide(root, slide, pptx, globalOptions = {}) {
 
     if (result) {
       if (result.items) {
+        const visuallyOverflowing =
+          node.nodeType === 1 && isVisuallyOverflowing(node, nodeStyle);
         result.items.forEach((item) => {
           item.stackingKey = currentSortKey;
+          item.sourceNode = node;
+          item.isVisuallyOverflowing = visuallyOverflowing;
         });
         renderQueue.push(...result.items);
       }
@@ -155,6 +182,17 @@ export async function processSlide(root, slide, pptx, globalOptions = {}) {
   finalQueue.sort((a, b) => {
     const stackingCompare = compareKeys(a.stackingKey || a.zIndex, b.stackingKey || b.zIndex);
     if (stackingCompare !== 0) return stackingCompare;
+
+    if (a.isVisuallyOverflowing !== b.isVisuallyOverflowing) {
+      const overflowItem = a.isVisuallyOverflowing ? a : b;
+      const regularItem = a.isVisuallyOverflowing ? b : a;
+      const regularIsAncestor =
+        regularItem.sourceNode?.nodeType === 1 &&
+        overflowItem.sourceNode &&
+        regularItem.sourceNode.contains(overflowItem.sourceNode);
+      if (!regularIsAncestor) return a.isVisuallyOverflowing ? -1 : 1;
+    }
+
     const domOrderCompare = a.domOrder - b.domOrder;
     if (domOrderCompare !== 0) return domOrderCompare;
     return compareKeys(a.zIndex, b.zIndex);
