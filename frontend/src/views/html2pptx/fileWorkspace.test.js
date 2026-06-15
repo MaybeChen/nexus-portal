@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   getPublicAssetRootUrl,
+  isHtmlResponse,
   removeUnavailableFontFallbacks,
   resolvePublicAssetUrl,
 } from './fileWorkspace.js';
@@ -86,4 +87,10 @@ test('removes an empty v4 compatibility font face when no source exists', () => 
   assert.doesNotMatch(rewritten, /fa-v4compatibility/);
   assert.doesNotMatch(rewritten, /@font-face/);
   assert.match(rewritten, /\.fa\s*{/);
+});
+
+test('detects portal HTML fallbacks before treating them as stylesheets', () => {
+  assert.equal(isHtmlResponse('<!DOCTYPE html><html><body>Portal</body></html>'), true);
+  assert.equal(isHtmlResponse('  <html><head></head></html>'), true);
+  assert.equal(isHtmlResponse('.fa-solid::before { content: "\\\\f005"; }'), false);
 });

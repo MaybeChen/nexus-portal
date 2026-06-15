@@ -248,6 +248,19 @@ function rewriteCssUrls(cssText, cssPath, fileMap, warnings) {
   });
 }
 
+export function isHtmlResponse(text) {
+  return /^\s*(?:<!doctype\s+html|<html\b)/i.test(String(text || ''));
+}
+
+function replaceStylesheetLinkWithInlineStyle(document, link, cssText) {
+  const style = document.createElement('style');
+  style.setAttribute('data-html2pptx-stylesheet', link.getAttribute('href') || '');
+  const media = link.getAttribute('media');
+  if (media) style.setAttribute('media', media);
+  style.textContent = cssText;
+  link.replaceWith(style);
+}
+
 function rewriteSrcset(value, htmlPath, fileMap, warnings) {
   return String(value || '')
     .split(',')
@@ -278,14 +291,12 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
           const response = await fetch(publicUrl);
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const cssText = await response.text();
+          if (isHtmlResponse(cssText)) throw new Error('返回了 HTML，而不是 CSS');
           const rewrittenCss = rewriteCssUrls(cssText, publicUrl, fileMap, warnings);
-          const cssUrl = URL.createObjectURL(new Blob([rewrittenCss], { type: 'text/css' }));
-          transientUrls.push(cssUrl);
-          link.setAttribute('href', cssUrl);
-        } catch {
-          // Keep the public stylesheet URL as a fallback. This still works when
-          // the stylesheet already references files from the public root.
+          replaceStylesheetLinkWithInlineStyle(document, link, rewrittenCss);
+        } catch (error) {
           link.setAttribute('href', publicUrl);
+          warnings.add(`样式表加载失败：${publicUrl}（${error?.message || error}）`);
         }
       } else if (cssPath) {
         warnings.add(`未找到样式表：${rawUrl}`);
@@ -295,9 +306,7 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
 
     const cssText = await asset.file.text();
     const rewrittenCss = rewriteCssUrls(cssText, cssPath, fileMap, warnings);
-    const cssUrl = URL.createObjectURL(new Blob([rewrittenCss], { type: 'text/css' }));
-    transientUrls.push(cssUrl);
-    link.setAttribute('href', preserveQueryAndHash(rawUrl, cssUrl));
+    replaceStylesheetLinkWithInlineStyle(document, link, rewrittenCss);
   }
 }
 
