@@ -19,7 +19,10 @@ const KNOWN_ASSET_MAPPINGS = [
   }
 ];
 
-const PUBLIC_ASSET_ROOT = 'assets/';
+// Files in frontend/public are emitted directly under Vite's BASE_URL.
+// Do not add an "assets/" segment here; that directory is reserved for
+// bundled build assets and is not where these copied public files live.
+const PUBLIC_ASSET_ROOT = '';
 const PUBLIC_ASSET_FILENAMES = new Set([
   'all.min.css',
   'echarts.min.js',
@@ -27,6 +30,7 @@ const PUBLIC_ASSET_FILENAMES = new Set([
   'fa-regular-400.woff2',
   'fa-solid-900.woff2',
   'fonts.css',
+  'logo.png',
   'NotoSansSC-Bold.otf',
   'NotoSansSC-Bold.ttf',
   'NotoSansSC-Light.otf',
@@ -95,15 +99,13 @@ function getPublicBaseUrl() {
 
 export function getPublicAssetRootUrl(baseUrl = getPublicBaseUrl()) {
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return /\/assets\/$/i.test(normalizedBase)
-    ? normalizedBase
-    : `${normalizedBase}${PUBLIC_ASSET_ROOT}`;
+  return `${normalizedBase}${PUBLIC_ASSET_ROOT}`;
 }
 
-function resolvePublicAssetUrl(rawUrl) {
+export function resolvePublicAssetUrl(rawUrl, baseUrl = getPublicBaseUrl()) {
   const filename = getAssetFilename(rawUrl);
   if (!filename || !PUBLIC_ASSET_FILENAMES.has(filename)) return null;
-  return preserveQueryAndHash(rawUrl, `${getPublicAssetRootUrl()}${filename}`);
+  return preserveQueryAndHash(rawUrl, `${getPublicAssetRootUrl(baseUrl)}${filename}`);
 }
 
 function getWorkspaceAsset(fileMap, assetPath) {
@@ -198,7 +200,19 @@ async function rewriteLinkedStylesheets(document, htmlPath, fileMap, warnings, t
     if (!asset?.file) {
       const publicUrl = resolvePublicAssetUrl(rawUrl);
       if (publicUrl) {
-        link.setAttribute('href', publicUrl);
+        try {
+          const response = await fetch(publicUrl);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const cssText = await response.text();
+          const rewrittenCss = rewriteCssUrls(cssText, publicUrl, fileMap, warnings);
+          const cssUrl = URL.createObjectURL(new Blob([rewrittenCss], { type: 'text/css' }));
+          transientUrls.push(cssUrl);
+          link.setAttribute('href', cssUrl);
+        } catch {
+          // Keep the public stylesheet URL as a fallback. This still works when
+          // the stylesheet already references files from the public root.
+          link.setAttribute('href', publicUrl);
+        }
       } else if (cssPath) {
         warnings.add(`未找到样式表：${rawUrl}`);
       }

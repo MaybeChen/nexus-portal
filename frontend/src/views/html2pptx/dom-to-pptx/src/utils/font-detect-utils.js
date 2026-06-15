@@ -1,5 +1,6 @@
 import { getComputedStyleForNode } from './dom-utils.js';
 import { getPrimaryFontFace, isPrivateUseText, normalizeFontFaceForPpt } from './text-style-utils.js';
+import { resolvePublicAssetUrl } from '../../../fileWorkspace.js';
 
 export function getUsedFontFamilies(root) {
   const families = new Set();
@@ -86,7 +87,11 @@ function addFontFace(foundFonts, processedUrls, usedFamilies, familyName, src, b
   const fontSource = extractUrl(src);
   if (!fontSource?.url) return;
 
-  const resolvedUrl = resolveFontUrl(fontSource.url, baseUrl);
+  // CSSOM may already contain a wrongly resolved historical path such as
+  // /assets/assets/NotoSansSC-Regular.ttf or /fa-regular-400.woff2.
+  // Canonicalize known public filenames back to Vite's public root.
+  const resolvedUrl =
+    resolvePublicAssetUrl(fontSource.url) || resolveFontUrl(fontSource.url, baseUrl);
   if (processedUrls.has(resolvedUrl)) return;
 
   processedUrls.add(resolvedUrl);
