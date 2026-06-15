@@ -167,8 +167,56 @@ function rewriteUrl(rawUrl, basePath, fileMap, warnings, label) {
   return rawUrl;
 }
 
+function splitCssCommaList(value) {
+  const parts = [];
+  let start = 0;
+  let depth = 0;
+  let quote = '';
+
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (quote) {
+      if (char === quote && value[index - 1] !== '\\') quote = '';
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === '(') {
+      depth += 1;
+    } else if (char === ')') {
+      depth = Math.max(0, depth - 1);
+    } else if (char === ',' && depth === 0) {
+      parts.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+
+function isUnavailableFontAwesomeTtf(source, cssPath, fileMap) {
+  const url = source.match(/url\((['"]?)(.*?)\1\)/i)?.[2];
+  if (!url || !/fa-(?:brands|regular|solid)-400\.ttf(?:[?#]|$)/i.test(url)) return false;
+  const assetPath = resolveRelativePath(cssPath, url, fileMap);
+  return !assetPath || !getWorkspaceAsset(fileMap, assetPath);
+}
+
+export function removeUnavailableFontFallbacks(cssText, cssPath = '', fileMap = new Map()) {
+  return String(cssText || '').replace(/(src\s*:\s*)([^;]+)(;)/gi, (full, prefix, sourceList, suffix) => {
+    const sources = splitCssCommaList(sourceList);
+    const availableSources = sources.filter(
+      (source) => !isUnavailableFontAwesomeTtf(source, cssPath, fileMap)
+    );
+    return availableSources.length > 0
+      ? `${prefix}${availableSources.join(', ')}${suffix}`
+      : full;
+  });
+}
+
 function rewriteCssUrls(cssText, cssPath, fileMap, warnings) {
-  return String(cssText || '').replace(/url\((['"]?)(.*?)\1\)/gi, (full, quote, rawUrl) => {
+  const filteredCss = removeUnavailableFontFallbacks(cssText, cssPath, fileMap);
+  return filteredCss.replace(/url\((['"]?)(.*?)\1\)/gi, (full, quote, rawUrl) => {
     const rewrittenUrl = rewriteUrl(String(rawUrl || '').trim(), cssPath, fileMap, warnings, '样式资源');
     return rewrittenUrl === rawUrl ? full : `url(${quote}${rewrittenUrl}${quote})`;
   });

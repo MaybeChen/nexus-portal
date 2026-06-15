@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   getPublicAssetRootUrl,
+  removeUnavailableFontFallbacks,
   resolvePublicAssetUrl,
 } from './fileWorkspace.js';
 
@@ -31,4 +32,27 @@ test('canonicalizes known CDN and duplicated paths to the public root', () => {
     resolvePublicAssetUrl('/wiseoffice/portal/webfonts/fa-regular-400.woff2', baseUrl),
     '/wiseoffice/portal/fa-regular-400.woff2'
   );
+});
+
+test('removes unavailable Font Awesome TTF fallbacks while retaining WOFF2', () => {
+  const css = `
+    @font-face {
+      font-family: "Font Awesome 6 Brands";
+      src: url("./fa-brands-400.woff2") format("woff2"),
+           url("./fa-brands-400.ttf") format("truetype");
+    }
+  `;
+  const rewritten = removeUnavailableFontFallbacks(css);
+
+  assert.match(rewritten, /fa-brands-400\.woff2/);
+  assert.doesNotMatch(rewritten, /fa-brands-400\.ttf/);
+});
+
+test('keeps a Font Awesome TTF fallback when it exists in the uploaded workspace', () => {
+  const css = 'src: url("./fa-brands-400.ttf") format("truetype");';
+  const fileMap = new Map([
+    ['styles/fa-brands-400.ttf', { url: 'blob:font-awesome-ttf' }],
+  ]);
+
+  assert.equal(removeUnavailableFontFallbacks(css, 'styles/all.min.css', fileMap), css);
 });
