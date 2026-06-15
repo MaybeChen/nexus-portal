@@ -94,6 +94,7 @@
             title="HTML2PPTX preview"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             :srcdoc="previewHtml"
+            @load="handlePreviewLoaded"
           />
           <el-empty v-else description="选择 HTML 文件后在这里预览" />
         </div>
@@ -105,7 +106,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 
-import { exportItemsToPptx } from './exporter';
+import { exportItemsToPptx, waitForDocumentFonts } from './exporter';
 import { buildWorkspace, readHtmlDocument, revokeWorkspaceUrls } from './fileWorkspace';
 
 const fileInputRef = ref();
@@ -188,6 +189,19 @@ async function refreshPreview() {
     statusType.value = 'error';
     statusText.value = `读取预览失败：${error?.message || error}`;
   }
+}
+
+async function handlePreviewLoaded() {
+  const iframe = previewFrameRef.value;
+  const document = iframe?.contentDocument;
+  if (!document) return;
+
+  await waitForDocumentFonts(document);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  // Force a style/layout read after the web fonts become available so
+  // pseudo-element icon glyphs are repainted in the preview iframe.
+  document.documentElement.getBoundingClientRect();
 }
 
 async function runExport(items, filename) {
