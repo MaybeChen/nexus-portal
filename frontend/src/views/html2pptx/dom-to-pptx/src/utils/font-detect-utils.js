@@ -40,18 +40,23 @@ function extractUrl(srcStr) {
   const matches = srcStr.match(/url\((["']?)(.*?)\1\)/g);
   if (!matches) return null;
 
-  let chosenUrl = null;
+  let chosen = null;
   for (const match of matches) {
     const urlRaw = match.replace(/url\((["']?)(.*?)\1\)/, '$2');
     if (urlRaw.startsWith('data:')) continue;
+    const trailingSource = srcStr.slice(srcStr.indexOf(match) + match.length);
+    const format = trailingSource.match(/^\s*format\((["']?)([^"')]+)\1\)/i)?.[2]?.toLowerCase();
+    const extension = urlRaw.match(/\.(woff2?|otf|ttf)(?:[?#]|$)/i)?.[1]?.toLowerCase();
+    const type =
+      format === 'truetype' ? 'ttf' : format === 'opentype' ? 'otf' : format || extension;
 
     if (urlRaw.includes('.ttf') || urlRaw.includes('.otf') || urlRaw.includes('.woff')) {
-      chosenUrl = urlRaw;
+      chosen = { url: urlRaw, type };
       break;
     }
-    if (!chosenUrl) chosenUrl = urlRaw;
+    if (!chosen) chosen = { url: urlRaw, type };
   }
-  return chosenUrl;
+  return chosen;
 }
 
 function resolveFontUrl(url, baseUrl) {
@@ -78,14 +83,18 @@ function addFontFace(foundFonts, processedUrls, usedFamilies, familyName, src, b
   const pptFontName = normalizeFontFaceForPpt(styleLike);
   if (!shouldEmbedFontFamily(usedFamilies, familyName, pptFontName)) return;
 
-  const url = extractUrl(src);
-  if (!url) return;
+  const fontSource = extractUrl(src);
+  if (!fontSource?.url) return;
 
-  const resolvedUrl = resolveFontUrl(url, baseUrl);
+  const resolvedUrl = resolveFontUrl(fontSource.url, baseUrl);
   if (processedUrls.has(resolvedUrl)) return;
 
   processedUrls.add(resolvedUrl);
-  foundFonts.push({ name: usedFamilies.has(familyName) ? familyName : pptFontName, url: resolvedUrl });
+  foundFonts.push({
+    name: usedFamilies.has(familyName) ? familyName : pptFontName,
+    url: resolvedUrl,
+    type: fontSource.type,
+  });
 }
 
 function scanFontFaceRules(rules, foundFonts, processedUrls, usedFamilies, baseUrl) {
@@ -128,19 +137,21 @@ async function scanStylesheetHref(sheet, foundFonts, processedUrls, usedFamilies
  * Scans document.styleSheets to find @font-face URLs for the requested families.
  * Returns an array of { name, url } objects.
  */
-export async function getAutoDetectedFonts(usedFamilies) {
+export async function getAutoDetectedFonts(usedFamilies, documents = [document]) {
   const foundFonts = [];
   const processedUrls = new Set();
 
-  for (const sheet of Array.from(document.styleSheets)) {
-    try {
-      // Accessing cssRules on cross-origin sheets might fail if CORS headers
-      // are not set. Fall back to fetching the stylesheet text where possible.
-      const rules = sheet.cssRules || sheet.rules;
-      scanFontFaceRules(rules, foundFonts, processedUrls, usedFamilies, sheet.href);
-    } catch (e) {
-      console.warn('Cannot scan stylesheet via CSSOM; trying fetch fallback:', sheet.href, e);
-      await scanStylesheetHref(sheet, foundFonts, processedUrls, usedFamilies);
+  for (const targetDocument of documents) {
+    for (const sheet of Array.from(targetDocument?.styleSheets || [])) {
+      try {
+        // Accessing cssRules on cross-origin sheets might fail if CORS headers
+        // are not set. Fall back to fetching the stylesheet text where possible.
+        const rules = sheet.cssRules || sheet.rules;
+        scanFontFaceRules(rules, foundFonts, processedUrls, usedFamilies, sheet.href);
+      } catch (e) {
+        console.warn('Cannot scan stylesheet via CSSOM; trying fetch fallback:', sheet.href, e);
+        await scanStylesheetHref(sheet, foundFonts, processedUrls, usedFamilies);
+      }
     }
   }
 
