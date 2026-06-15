@@ -53,7 +53,7 @@ export default ({ mode }) => {
     },
     build: {
       target: "es2015",
-      outDir: "dist/nexus",
+      outDir: "dist/portal",
     },
   });
 };
