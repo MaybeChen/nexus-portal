@@ -130,6 +130,10 @@ function extractExportSnapshot(iframe) {
   const sourceDocument = iframe.contentDocument;
   const clonedDocument = sourceDocument.documentElement.cloneNode(true);
   cleanTextForPpt(clonedDocument);
+  // The source iframe has already executed Tailwind/ECharts and contains their
+  // rendered DOM. Running the cloned scripts again duplicates chart canvases/SVGs
+  // and can append a second copy over the first one.
+  clonedDocument.querySelectorAll('script').forEach((script) => script.remove());
 
   const parser = new DOMParser();
   const snapshot = parser.parseFromString('<!doctype html><html><head></head><body></body></html>', 'text/html');
