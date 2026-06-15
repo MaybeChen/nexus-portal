@@ -1,5 +1,10 @@
 import { parseColor, getTextStyle, isPrivateUseText } from '../utils.js';
 import { PX_TO_INCH } from '../constants.js';
+import {
+  getRenderedPseudoContent,
+  iconGlyphToCanvasImage,
+  isIconFontStyle,
+} from './element-capture.js';
 
 export function getPseudoElementRect(hostRect, pseudoStyle) {
   const w = parseFloat(pseudoStyle.width) || 0;
@@ -95,10 +100,11 @@ export function getPseudoElementRect(hostRect, pseudoStyle) {
 }
 
 export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIndex, domOrder, pptx) {
-  const pseudoStyle = window.getComputedStyle(node, pseudoType);
+  const ownerWindow = node.ownerDocument?.defaultView || window;
+  const pseudoStyle = ownerWindow.getComputedStyle(node, pseudoType);
   const content = pseudoStyle.content;
   const rawHasContent = content && content !== 'none' && content !== 'normal' && content !== '""';
-  const cleanText = rawHasContent ? content.replace(/^['"]|['"]$/g, '') : '';
+  const cleanText = rawHasContent ? getRenderedPseudoContent(content) : '';
   const hasContent = rawHasContent;
 
   const bgColor = parseColor(pseudoStyle.backgroundColor);
@@ -109,7 +115,20 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
 
   if (!hasBg && !hasBorder && !hasContent) return null;
 
-  const rect = getPseudoElementRect(hostRect, pseudoStyle) || (hasContent ? hostRect : null);
+  let rect = getPseudoElementRect(hostRect, pseudoStyle);
+  const isIconPseudo = hasContent && isIconFontStyle(pseudoStyle);
+  if (!rect && isIconPseudo) {
+    const fontSize = parseFloat(pseudoStyle.fontSize) || Math.min(hostRect.width, hostRect.height);
+    const lineHeight = parseFloat(pseudoStyle.lineHeight) || fontSize;
+    const size = Math.max(fontSize, 1);
+    rect = {
+      left: pseudoType === '::after' ? hostRect.right - size : hostRect.left,
+      top: hostRect.top + Math.max(0, (hostRect.height - lineHeight) / 2),
+      width: size,
+      height: Math.max(lineHeight, size),
+    };
+  }
+  if (!rect) rect = hasContent ? hostRect : null;
   if (!rect) return null;
 
   const scale = config.scale;
@@ -120,6 +139,27 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
 
   const borderRadius = parseFloat(pseudoStyle.borderRadius) || 0;
   const isCircle = borderRadius >= Math.min(rect.width, rect.height) / 2 - 1;
+
+  if (isIconPseudo) {
+    const item = {
+      type: 'image',
+      zIndex,
+      domOrder,
+      options: { x, y, w, h, data: null },
+    };
+    const job = async () => {
+      const imageData = await iconGlyphToCanvasImage(
+        node.ownerDocument || document,
+        pseudoStyle,
+        cleanText,
+        rect.width,
+        rect.height
+      );
+      if (imageData) item.options.data = imageData;
+      else item.skip = true;
+    };
+    return { items: [item], job };
+  }
 
   if (hasContent) {
     const textOpts = getTextStyle(pseudoStyle, scale, false, 1, {
@@ -147,16 +187,20 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
     }
 
     return {
-      type: 'text',
-      zIndex,
-      domOrder,
-      textParts: [
+      items: [
         {
-          text: cleanText,
-          options: textOpts,
+          type: 'text',
+          zIndex,
+          domOrder,
+          textParts: [
+            {
+              text: cleanText,
+              options: textOpts,
+            },
+          ],
+          options: textOptions,
         },
       ],
-      options: textOptions,
     };
   }
 
@@ -179,11 +223,14 @@ export function preparePseudoElementItem(node, pseudoType, hostRect, config, zIn
   }
 
   return {
-    type: 'shape',
-    zIndex,
-    domOrder,
-    shapeType,
-    options: shapeOpts,
+    items: [
+      {
+        type: 'shape',
+        zIndex,
+        domOrder,
+        shapeType,
+        options: shapeOpts,
+      },
+    ],
   };
 }
-

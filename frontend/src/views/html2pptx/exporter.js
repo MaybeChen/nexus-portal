@@ -1,5 +1,6 @@
 import { exportToPptx } from './dom-to-pptx/src/index.js';
 import { readHtmlDocument, revokeWorkspaceUrls } from './fileWorkspace';
+import { injectIframeWarningFilter } from './runtime-warning-utils.js';
 
 const EXPORT_OPTIONS = {
   autoEmbedFonts: true,
@@ -96,7 +97,7 @@ async function createExportIframe(html, stage) {
   iframe.style.cssText = 'display: block; width: 1600px; height: 900px; border: 0;';
   stage.appendChild(iframe);
   const loaded = waitForIframe(iframe);
-  iframe.srcdoc = html;
+  iframe.srcdoc = injectIframeWarningFilter(html);
   await loaded;
   return iframe;
 }
@@ -130,6 +131,10 @@ function extractExportSnapshot(iframe) {
   const sourceDocument = iframe.contentDocument;
   const clonedDocument = sourceDocument.documentElement.cloneNode(true);
   cleanTextForPpt(clonedDocument);
+  // The source iframe has already executed Tailwind/ECharts and contains their
+  // rendered DOM. Running the cloned scripts again duplicates chart canvases/SVGs
+  // and can append a second copy over the first one.
+  clonedDocument.querySelectorAll('script').forEach((script) => script.remove());
 
   const parser = new DOMParser();
   const snapshot = parser.parseFromString('<!doctype html><html><head></head><body></body></html>', 'text/html');
