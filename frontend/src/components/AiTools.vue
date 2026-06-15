@@ -4,7 +4,7 @@
       <div>
         <p>工具</p>
       </div>
-      <el-button class="primary-action" type="primary" round @click="openCreateToolDialog">＋ 创建工具</el-button>
+      <el-button v-if="userStore.isGts" class="primary-action" type="primary" round @click="openCreateToolDialog">＋ 创建工具</el-button>
     </div>
 
 
@@ -30,7 +30,7 @@
               <img class="tool-card__use-icon tool-card__use-icon--normal" :src="startNormalIcon" alt="" aria-hidden="true" />
               <img class="tool-card__use-icon tool-card__use-icon--high" :src="startHighIcon" alt="" aria-hidden="true" />
             </el-button>
-            <el-dropdown v-if="canManageTool(tool)" trigger="click" placement="bottom-end">
+            <el-dropdown v-if="canManageTool(tool) && userStore.isGts" trigger="click" placement="bottom-end">
               <el-button class="tool-card__more" aria-label="更多操作">
                 <img class="tool-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
               </el-button>

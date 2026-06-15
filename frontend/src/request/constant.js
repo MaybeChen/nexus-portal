@@ -29,3 +29,4 @@ export const FILE_DELETE = '/files/delete';
 export const FILE_DOWNLOAD = '/files/download';
 export const USER_INFO = '/me';
 export const EVENT_UPLOAD = '/event/upload';
+export const USER_PERMISSION = '/user/permission';
