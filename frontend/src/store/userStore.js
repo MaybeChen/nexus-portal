@@ -7,7 +7,8 @@ export const useUserStore = defineStore('user', {
       _avatar: '', // 头像
       _employeeNumber: '',
       _name: '',
-      _role: ''
+      _role: '',
+      _isGts: false,
     };
   },
 
@@ -16,7 +17,8 @@ export const useUserStore = defineStore('user', {
     avatar: (state) => state._avatar,
     name: (state) => state._name,
     employeeNumber: (state) => state._employeeNumber,
-    role: (state) => state._role
+    role: (state) => state._role,
+    isGts: (state) => state._isGts,
   },
 
   actions: {
@@ -27,6 +29,10 @@ export const useUserStore = defineStore('user', {
       this._employeeNumber = employeeNumber || '';
       this._avatar = avatar || '';
       this._role = role || '';
+    },
+
+    setGts(isGts = false) {
+      this._isGts = isGts;
     }
   }
 });
