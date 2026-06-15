@@ -1,10 +1,80 @@
 import html2canvas from 'html2canvas';
 
-function isIconFontStyle(style) {
-  return /font awesome|fontawesome|bootstrap-icons|material icons/i.test(style?.fontFamily || '');
+export function isIconFontStyle(style) {
+  return /font awesome|fontawesome|bootstrap[- ]icons|material (?:icons|symbols)/i.test(
+    style?.fontFamily || ''
+  );
+}
+
+export function getRenderedPseudoContent(content) {
+  if (!content || content === 'none' || content === 'normal' || content === '""' || content === "''") {
+    return '';
+  }
+
+  const unquoted = content.replace(/^(['"])(.*)\1$/s, '$2');
+  return unquoted
+    .replace(/\\([0-9a-f]{1,6})\s?/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/\\(["'\\])/g, '$1');
+}
+
+function getIconPseudoStyle(node) {
+  const ownerWindow = node.ownerDocument?.defaultView || window;
+  for (const pseudoType of ['::before', '::after']) {
+    const style = ownerWindow.getComputedStyle(node, pseudoType);
+    const text = getRenderedPseudoContent(style.content);
+    if (text && isIconFontStyle(style)) return { style, text };
+  }
+  return null;
+}
+
+export async function iconGlyphToCanvasImage(ownerDocument, style, text, widthPx, heightPx) {
+  const width = Math.max(Math.ceil(widthPx), 1);
+  const height = Math.max(Math.ceil(heightPx), 1);
+  const pixelRatio = 3;
+  const fontSize = parseFloat(style.fontSize) || Math.min(width, height);
+  const fontFamily = style.fontFamily || 'sans-serif';
+  const fontWeight = style.fontWeight || 'normal';
+  const fontStyle = style.fontStyle || 'normal';
+  const font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+
+  try {
+    await ownerDocument.fonts?.load(font, text);
+  } catch (error) {
+    console.warn('Icon font could not be preloaded before capture', error);
+  }
+
+  const canvas = ownerDocument.createElement('canvas');
+  canvas.width = width * pixelRatio;
+  canvas.height = height * pixelRatio;
+  const context = canvas.getContext('2d');
+  if (!context) return null;
+
+  context.scale(pixelRatio, pixelRatio);
+  context.font = font;
+  context.fillStyle = style.color || '#000';
+  context.globalAlpha = Number.isFinite(parseFloat(style.opacity)) ? parseFloat(style.opacity) : 1;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, width / 2, height / 2);
+  return canvas.toDataURL('image/png');
+}
+
+async function iconElementToCanvasImage(node, widthPx, heightPx) {
+  const icon = getIconPseudoStyle(node);
+  if (!icon) return null;
+  return iconGlyphToCanvasImage(
+    node.ownerDocument || document,
+    icon.style,
+    icon.text,
+    widthPx,
+    heightPx
+  );
 }
 
 export async function elementToCanvasImage(node, widthPx, heightPx) {
+  const iconImage = await iconElementToCanvasImage(node, widthPx, heightPx);
+  if (iconImage) return iconImage;
+
   return new Promise((resolve) => {
     const originalId = node.id;
     const tempId = 'pptx-capture-' + Math.random().toString(36).substr(2, 9);
@@ -143,10 +213,7 @@ export function isIconElement(node) {
         cls.includes('material-icons') ||
         cls.includes('icon'))
     ) {
-      const before = window.getComputedStyle(node, '::before').content;
-      const after = window.getComputedStyle(node, '::after').content;
-      const hasContent = (c) => c && c !== 'none' && c !== 'normal' && c !== '""';
-      if (hasContent(before) || hasContent(after)) return true;
+      if (getIconPseudoStyle(node)) return true;
     }
   }
 

@@ -1,5 +1,6 @@
 import { getComputedStyleForNode } from './dom-utils.js';
 import { parseColor, getGradientFallbackColor } from './color-utils.js';
+import { isIconFontStyle } from '../rendering/element-capture.js';
 
 const FALLBACK_FONT_FACE = 'Noto Sans SC';
 const COMMON_FONT_FACES = new Set([
@@ -220,7 +221,8 @@ export function collectTextParts(
   scale,
   activeHyperlink = null,
   isRoot = true,
-  inheritedOpacity = 1
+  inheritedOpacity = 1,
+  { omitIconPseudos = false } = {}
 ) {
   const parts = [];
   let hyperlink = activeHyperlink;
@@ -240,7 +242,25 @@ export function collectTextParts(
   if (node.nodeType === 1) {
     const beforeStyle = getComputedStyleForNode(node, '::before');
     const content = beforeStyle.content;
-    if (content && content !== 'none' && content !== 'normal' && content !== '""') {
+    const omitBeforeIcon =
+      omitIconPseudos &&
+      content &&
+      content !== 'none' &&
+      content !== 'normal' &&
+      content !== '""' &&
+      isIconFontStyle(beforeStyle);
+    if (omitBeforeIcon) {
+      const placeholderOpts = getTextStyle(parentStyle, scale, false, inheritedOpacity);
+      if (hyperlink) placeholderOpts.hyperlink = hyperlink;
+      parts.push({ text: '\u2003 ', options: placeholderOpts });
+    }
+    if (
+      content &&
+      content !== 'none' &&
+      content !== 'normal' &&
+      content !== '""' &&
+      !omitBeforeIcon
+    ) {
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
       if (cleanContent.trim()) {
@@ -336,7 +356,8 @@ export function collectTextParts(
           scale,
           hyperlink,
           false,
-          inheritedOpacity
+          inheritedOpacity,
+          { omitIconPseudos }
         );
         if (childParts.length > 0) parts.push(...childParts);
 
@@ -352,7 +373,25 @@ export function collectTextParts(
   if (node.nodeType === 1) {
     const afterStyle = getComputedStyleForNode(node, '::after');
     const content = afterStyle.content;
-    if (content && content !== 'none' && content !== 'normal' && content !== '""') {
+    const omitAfterIcon =
+      omitIconPseudos &&
+      content &&
+      content !== 'none' &&
+      content !== 'normal' &&
+      content !== '""' &&
+      isIconFontStyle(afterStyle);
+    if (omitAfterIcon) {
+      const placeholderOpts = getTextStyle(parentStyle, scale, false, inheritedOpacity);
+      if (hyperlink) placeholderOpts.hyperlink = hyperlink;
+      parts.push({ text: ' \u2003', options: placeholderOpts });
+    }
+    if (
+      content &&
+      content !== 'none' &&
+      content !== 'normal' &&
+      content !== '""' &&
+      !omitAfterIcon
+    ) {
       // Strip quotes
       const cleanContent = content.replace(/^['"]|['"]$/g, '');
       if (cleanContent.trim()) {

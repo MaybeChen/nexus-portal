@@ -437,10 +437,19 @@ export function prepareRenderItem(node, config, domOrder, pptx, effectiveZIndex,
   if (backgroundJob) bgJob = backgroundJob;
   if (!backgroundJob) addShapeOrText(items, context, renderInfo, radiusInfo, textPayload, customShapeName, pptx);
 
+  const asyncJobs = bgJob ? [bgJob] : [];
   const pseudoBefore = preparePseudoElementItem(node, '::before', rect, config, parentSortKey.concat([-1000000]), domOrder, pptx);
-  if (pseudoBefore) items.unshift(pseudoBefore);
+  if (pseudoBefore?.items) items.unshift(...pseudoBefore.items);
+  if (pseudoBefore?.job) asyncJobs.push(pseudoBefore.job);
   const pseudoAfter = preparePseudoElementItem(node, '::after', rect, config, parentSortKey.concat([0, Infinity]), domOrder, pptx);
-  if (pseudoAfter) items.push(pseudoAfter);
+  if (pseudoAfter?.items) items.push(...pseudoAfter.items);
+  if (pseudoAfter?.job) asyncJobs.push(pseudoAfter.job);
 
-  return { items, job: bgJob, stopRecursion: !!textPayload };
+  const job =
+    asyncJobs.length > 0
+      ? async () => {
+          await Promise.all(asyncJobs.map((asyncJob) => asyncJob()));
+        }
+      : null;
+  return { items, job, stopRecursion: !!textPayload };
 }
