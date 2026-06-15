@@ -19,10 +19,9 @@ const KNOWN_ASSET_MAPPINGS = [
   }
 ];
 
-// Files in frontend/public are emitted directly under Vite's BASE_URL.
-// Do not add an "assets/" segment here; that directory is reserved for
-// bundled build assets and is not where these copied public files live.
-const PUBLIC_ASSET_ROOT = '';
+// The deployed portal exposes the copied HTML2PPTX runtime files from the
+// BASE_URL assets directory. Keep exactly one "assets/" segment.
+const PUBLIC_ASSET_ROOT = 'assets/';
 const PUBLIC_ASSET_FILENAMES = new Set([
   'all.min.css',
   'echarts.min.js',
@@ -99,7 +98,9 @@ function getPublicBaseUrl() {
 
 export function getPublicAssetRootUrl(baseUrl = getPublicBaseUrl()) {
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return `${normalizedBase}${PUBLIC_ASSET_ROOT}`;
+  return /\/assets\/$/i.test(normalizedBase)
+    ? normalizedBase
+    : `${normalizedBase}${PUBLIC_ASSET_ROOT}`;
 }
 
 export function resolvePublicAssetUrl(rawUrl, baseUrl = getPublicBaseUrl()) {

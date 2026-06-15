@@ -7,11 +7,11 @@ import {
   resolvePublicAssetUrl,
 } from './fileWorkspace.js';
 
-test('maps public files directly under Vite BASE_URL', () => {
-  assert.equal(getPublicAssetRootUrl('/wiseoffice/portal/'), '/wiseoffice/portal/');
+test('maps runtime files under the deployed assets directory', () => {
+  assert.equal(getPublicAssetRootUrl('/wiseoffice/portal/'), '/wiseoffice/portal/assets/');
 });
 
-test('preserves an explicit assets segment when it is actually part of BASE_URL', () => {
+test('does not duplicate an assets segment already present in BASE_URL', () => {
   assert.equal(getPublicAssetRootUrl('/wiseoffice/portal/assets/'), '/wiseoffice/portal/assets/');
 });
 
@@ -22,15 +22,15 @@ test('canonicalizes known CDN and duplicated paths to the public root', () => {
       'https://cdn.digitalhumanai.top/slidagent/pptx-craft/assets/css/fonts.css',
       baseUrl
     ),
-    '/wiseoffice/portal/fonts.css'
+    '/wiseoffice/portal/assets/fonts.css'
   );
   assert.equal(
     resolvePublicAssetUrl('/wiseoffice/portal/assets/assets/NotoSansSC-Regular.ttf', baseUrl),
-    '/wiseoffice/portal/NotoSansSC-Regular.ttf'
+    '/wiseoffice/portal/assets/NotoSansSC-Regular.ttf'
   );
   assert.equal(
     resolvePublicAssetUrl('/wiseoffice/portal/webfonts/fa-regular-400.woff2', baseUrl),
-    '/wiseoffice/portal/fa-regular-400.woff2'
+    '/wiseoffice/portal/assets/fa-regular-400.woff2'
   );
 });
 
