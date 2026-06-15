@@ -4,7 +4,7 @@
       <div>
         <p>技能</p>
       </div>
-      <el-button class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
+      <el-button v-if="userStore.isGts" class="primary-action" type="primary" round @click="openCreateSkillDialog">＋ 发布技能</el-button>
     </div>
 
     <div v-if="loadingSkills || skills.length > 0" v-loading="loadingSkills" class="asset-grid asset-grid--quarter">
@@ -34,7 +34,7 @@
               <img class="skill-card__download-icon skill-card__download-icon--normal" :src="downloadNormalIcon" alt="" aria-hidden="true" />
               <img class="skill-card__download-icon skill-card__download-icon--high" :src="downloadHighIcon" alt="" aria-hidden="true" />
             </el-button>
-            <el-dropdown v-if="canManageSkill(skill)" trigger="click" placement="bottom-end">
+            <el-dropdown v-if="canManageSkill(skill) && userStore.isGts" trigger="click" placement="bottom-end">
               <el-button class="skill-card__more" aria-label="更多操作">
                 <img class="skill-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
               </el-button>
@@ -73,7 +73,7 @@
           @keydown.enter="downloadFile(file)"
         >
           <span>{{ file.originalName || file.name }}</span>
-          <el-button :loading="downloadingFileId === file.id" type="primary" link>下载</el-button>
+          <el-button v-if="userStore.isGts" :loading="downloadingFileId === file.id" type="primary" link>下载</el-button>
         </div>
       </div>
       <el-empty v-else description="该技能暂无可下载文件" />
