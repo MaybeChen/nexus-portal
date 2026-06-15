@@ -21,10 +21,40 @@ function waitForIframe(iframe) {
   });
 }
 
-async function waitForDocumentFonts(document) {
-  if (document?.fonts?.ready) {
-    await document.fonts.ready.catch(() => undefined);
+function getRenderedPseudoContent(content) {
+  if (!content || content === 'none' || content === 'normal' || content === '""' || content === "''") {
+    return '';
   }
+  return content.replace(/^(['"])(.*)\1$/s, '$2');
+}
+
+export async function waitForDocumentFonts(document) {
+  if (!document?.fonts) return;
+
+  await document.fonts.ready.catch(() => undefined);
+
+  const ownerWindow = document.defaultView;
+  const fontLoads = [];
+  Array.from(document.body?.querySelectorAll('*') || []).forEach((element) => {
+    for (const pseudoType of ['::before', '::after']) {
+      const style = ownerWindow?.getComputedStyle(element, pseudoType);
+      const content = getRenderedPseudoContent(style?.content);
+      if (!content) continue;
+
+      const fontFamily = style.fontFamily || 'sans-serif';
+      const fontSize = style.fontSize || '16px';
+      const fontWeight = style.fontWeight || 'normal';
+      const fontStyle = style.fontStyle || 'normal';
+      fontLoads.push(
+        document.fonts
+          .load(`${fontStyle} ${fontWeight} ${fontSize} ${fontFamily}`, content)
+          .catch(() => undefined)
+      );
+    }
+  });
+
+  if (fontLoads.length > 0) await Promise.all(fontLoads);
+  await document.fonts.ready.catch(() => undefined);
 }
 
 async function waitForImages(root) {
