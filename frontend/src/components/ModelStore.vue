@@ -4,7 +4,7 @@
       <div>
         <p>模型</p>
       </div>
-      <el-button class="primary-action" type="primary" round @click="openCreateModelDialog">＋ 增加模型</el-button>
+      <el-button v-if="userStore.isGts" class="primary-action" type="primary" round @click="openCreateModelDialog">＋ 增加模型</el-button>
     </div>
 
     <div v-if="loadingModels || models.length > 0" v-loading="loadingModels" class="asset-grid asset-grid--half">
@@ -65,7 +65,7 @@
               · {{ getModelAuthorText(model) }}
             </span>
           </div>
-          <div class="model-card__actions" v-if="canManageModel(model)">
+          <div class="model-card__actions" v-if="canManageModel(model) && userStore.isGts">
             <el-dropdown trigger="click" placement="bottom-end">
               <el-button class="model-card__more" aria-label="更多操作">
                 <img class="model-card__more-icon" :src="moreIcon" alt="" aria-hidden="true" />
