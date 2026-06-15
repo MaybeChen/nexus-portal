@@ -1,5 +1,9 @@
 import { exportToPptx } from './dom-to-pptx/src/index.js';
-import { readHtmlDocument, revokeWorkspaceUrls } from './fileWorkspace';
+import {
+  readHtmlDocument,
+  resolvePublicAssetUrl,
+  revokeWorkspaceUrls,
+} from './fileWorkspace.js';
 import { injectIframeWarningFilter } from './runtime-warning-utils.js';
 
 const EXPORT_OPTIONS = {
@@ -28,9 +32,47 @@ function getRenderedPseudoContent(content) {
   return content.replace(/^(['"])(.*)\1$/s, '$2');
 }
 
+export function getFontAwesomeFaceDefinitions() {
+  return [
+    { family: 'Font Awesome 6 Free', weight: '400', file: 'fa-regular-400.woff2' },
+    { family: 'Font Awesome 6 Free', weight: '900', file: 'fa-solid-900.woff2' },
+    { family: 'Font Awesome 6 Brands', weight: '400', file: 'fa-brands-400.woff2' },
+    { family: 'Font Awesome 5 Free', weight: '400', file: 'fa-regular-400.woff2' },
+    { family: 'Font Awesome 5 Free', weight: '900', file: 'fa-solid-900.woff2' },
+    { family: 'Font Awesome 5 Brands', weight: '400', file: 'fa-brands-400.woff2' },
+    { family: 'FontAwesome', weight: '400', file: 'fa-regular-400.woff2' },
+    { family: 'FontAwesome', weight: '900', file: 'fa-solid-900.woff2' },
+  ];
+}
+
+async function registerFontAwesomeFaces(document) {
+  const FontFaceConstructor = document?.defaultView?.FontFace;
+  if (!document?.fonts || !FontFaceConstructor) return;
+
+  const loads = getFontAwesomeFaceDefinitions().map(async ({ family, weight, file }) => {
+    const url = resolvePublicAssetUrl(file);
+    if (!url) return;
+
+    try {
+      const face = new FontFaceConstructor(
+        family,
+        `url("${url}") format("woff2")`,
+        { style: 'normal', weight, display: 'block' }
+      );
+      const loadedFace = await face.load();
+      document.fonts.add(loadedFace);
+    } catch (error) {
+      console.warn(`Failed to register preview font: ${family} ${weight} (${url})`, error);
+    }
+  });
+
+  await Promise.all(loads);
+}
+
 export async function waitForDocumentFonts(document) {
   if (!document?.fonts) return;
 
+  await registerFontAwesomeFaces(document);
   await document.fonts.ready.catch(() => undefined);
 
   const ownerWindow = document.defaultView;
