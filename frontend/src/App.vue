@@ -5,9 +5,10 @@
 <script setup>
 import { onBeforeMount } from 'vue';
 
-import { getUserInfo } from '@/request/service';
+import { getUserInfo,getUserPermission } from '@/request/service';
 
 onBeforeMount(async () => {
   await getUserInfo();
+  getUserPermission();
 });
 </script>
