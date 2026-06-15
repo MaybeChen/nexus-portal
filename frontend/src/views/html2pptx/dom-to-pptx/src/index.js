@@ -64,7 +64,16 @@ async function getFontsToEmbed(elements, options) {
   if (!options.autoEmbedFonts) return fontsToEmbed;
 
   const usedFamilies = getUsedFontFamilies(elements);
-  const detectedFonts = await getAutoDetectedFonts(usedFamilies);
+  const ownerDocuments = Array.from(
+    new Set(
+      elements
+        .map((element) =>
+          typeof element === 'string' ? document.querySelector(element)?.ownerDocument : element?.ownerDocument
+        )
+        .filter(Boolean)
+    )
+  );
+  const detectedFonts = await getAutoDetectedFonts(usedFamilies, ownerDocuments);
   const explicitNames = new Set(fontsToEmbed.map((f) => f.name));
 
   for (const autoFont of detectedFonts) {
@@ -92,9 +101,13 @@ async function embedFontsInPptx(pptx, fontsToEmbed, options) {
       const response = await fetch(fontCfg.url);
       if (!response.ok) throw new Error(`Failed to fetch ${fontCfg.url}`);
       const buffer = await response.arrayBuffer();
+      const signature = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 4));
+      const signatureText = String.fromCharCode(...signature);
+      if (signatureText.startsWith('<!do') || signatureText.startsWith('<htm')) {
+        throw new Error(`Font URL returned HTML instead of font data: ${fontCfg.url}`);
+      }
       const ext = fontCfg.url.split('.').pop().split(/[?#]/)[0].toLowerCase();
-      let type = 'ttf';
-      if (['woff', 'woff2', 'otf'].includes(ext)) type = ext;
+      const type = fontCfg.type || (['woff', 'woff2', 'otf'].includes(ext) ? ext : 'ttf');
       await embedder.addFont(fontCfg.name, buffer, type);
     } catch (e) {
       console.warn(`Failed to embed font: ${fontCfg.name} (${fontCfg.url})`, e);

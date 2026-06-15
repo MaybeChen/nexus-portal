@@ -72,7 +72,12 @@ export function extractTableData(node, scale) {
 
     cellList.forEach((cell) => {
       const style = getComputedStyleForNode(cell);
-      const cellParts = collectTextParts(cell, style, scale);
+      // Icon-font pseudo-elements are added as image overlays by prepareTableItem.
+      // Keeping their private-use glyphs in the editable table text makes
+      // PowerPoint substitute the font and display tofu/garbled characters.
+      const cellParts = collectTextParts(cell, style, scale, null, true, 1, {
+        omitIconPseudos: true,
+      });
       // Fallback to plain text if collectTextParts returns empty/invalid
       const cellText =
         cellParts && cellParts.length > 0
