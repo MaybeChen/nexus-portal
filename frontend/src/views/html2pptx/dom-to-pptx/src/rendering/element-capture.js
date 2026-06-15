@@ -27,12 +27,7 @@ function getIconPseudoStyle(node) {
   return null;
 }
 
-async function iconElementToCanvasImage(node, widthPx, heightPx) {
-  const icon = getIconPseudoStyle(node);
-  if (!icon) return null;
-
-  const { style, text } = icon;
-  const ownerDocument = node.ownerDocument || document;
+export async function iconGlyphToCanvasImage(ownerDocument, style, text, widthPx, heightPx) {
   const width = Math.max(Math.ceil(widthPx), 1);
   const height = Math.max(Math.ceil(heightPx), 1);
   const pixelRatio = 3;
@@ -62,6 +57,18 @@ async function iconElementToCanvasImage(node, widthPx, heightPx) {
   context.textBaseline = 'middle';
   context.fillText(text, width / 2, height / 2);
   return canvas.toDataURL('image/png');
+}
+
+async function iconElementToCanvasImage(node, widthPx, heightPx) {
+  const icon = getIconPseudoStyle(node);
+  if (!icon) return null;
+  return iconGlyphToCanvasImage(
+    node.ownerDocument || document,
+    icon.style,
+    icon.text,
+    widthPx,
+    heightPx
+  );
 }
 
 export async function elementToCanvasImage(node, widthPx, heightPx) {

@@ -301,7 +301,9 @@ export function prepareImgItem(node, context) {
 export function buildTextPayload(node, style, config, writingModeVert, inheritedOpacity) {
   if (!isTextContainer(node)) return null;
 
-  const textParts = collectTextParts(node, style, config.scale, null, true, inheritedOpacity);
+  const textParts = collectTextParts(node, style, config.scale, null, true, inheritedOpacity, {
+    omitIconPseudos: true,
+  });
   if (textParts.length === 0) return null;
 
   let align = style.textAlign || 'left';
