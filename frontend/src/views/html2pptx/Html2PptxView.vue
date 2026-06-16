@@ -6,14 +6,13 @@
           <span class="html2pptx-logo">◇</span>
           <span>HTML 转 PowerPoint</span>
         </div>
-        <el-tag class="html2pptx-local-tag" type="success" size="large">转换记录</el-tag>
       </header>
 
       <section class="html2pptx-hero">
         <div class="html2pptx-hero-copy">
           <h1>本地 <span>HTML</span> 转 <span>PowerPoint</span></h1>
           <p class="html2pptx-subtitle">
-            选择多个 HTML 文件，或拖拽单个 HTML、CSS、图片、字体等资源到目录，工具会在浏览器本地完成预览并导出 PPTX。
+            选择单个HTML 文件，或选择完整目录，工具会在浏览器本地完成预览并导出 PPTX。
           </p>
         </div>
         <div class="html2pptx-hero-art" aria-hidden="true">
@@ -30,7 +29,7 @@
         <aside class="html2pptx-sidebar">
           <div class="html2pptx-upload-card">
             <el-button class="html2pptx-main-button" type="primary" size="large" @click="pickHtmlFiles">▣ 选择 HTML 文件</el-button>
-            <el-button class="html2pptx-directory-button" size="large" @click="pickDirectory">或拖拽目录</el-button>
+            <el-button class="html2pptx-directory-button" size="large" @click="pickDirectory">选择目录</el-button>
             <input ref="fileInputRef" class="html2pptx-hidden-input" type="file" multiple accept=".html,.htm,text/html" @change="handleFilesSelected" />
             <input ref="directoryInputRef" class="html2pptx-hidden-input" type="file" multiple webkitdirectory @change="handleFilesSelected" />
             <p>目录或文件会在本地浏览器中处理，多个独立 HTML 文件请放在同目录或使用内联资源。</p>
@@ -43,19 +42,21 @@
               <strong>HTML 文件</strong>
               <span>{{ htmlFiles.length }}</span>
             </div>
-            <el-empty v-if="!htmlFiles.length" description="还没有选择文件" :image-size="92" />
-            <button
-              v-for="(item, index) in htmlFiles"
-              v-else
-              :key="item.path"
-              class="html2pptx-file-item"
-              :class="{ 'is-active': index === activeIndex }"
-              type="button"
-              @click="setActiveIndex(index)"
-            >
-              <span>{{ item.name }}</span>
-              <small>{{ item.path }}</small>
-            </button>
+            <div class="html2pptx-file-list">
+              <el-empty v-if="!htmlFiles.length" description="还没有选择文件" :image-size="92" />
+              <button
+                v-for="(item, index) in htmlFiles"
+                v-else
+                :key="item.path"
+                class="html2pptx-file-item"
+                :class="{ 'is-active': index === activeIndex }"
+                type="button"
+                @click="setActiveIndex(index)"
+              >
+                <span>{{ item.name }}</span>
+                <small>{{ item.path }}</small>
+              </button>
+            </div>
             <div class="html2pptx-security-note">
               <span>♧</span>
               <p>所有转换均在本地完成，文件不会上传到任何服务器。</p>
@@ -70,7 +71,7 @@
               <small v-if="activeItem">{{ activeItem.path }}</small>
             </div>
             <div class="html2pptx-actions">
-              <el-button :disabled="!activeItem || exporting" @click="diagnoseFonts">手机边框</el-button>
+              <el-button :disabled="!activeItem || exporting" @click="diagnoseFonts">字体诊断</el-button>
               <el-button :disabled="!activeItem || exporting" @click="exportCurrent">导出当前 HTML</el-button>
               <el-button type="primary" :disabled="!htmlFiles.length || exporting" :loading="exporting" @click="exportAll">导出全部 HTML</el-button>
             </div>
@@ -286,7 +287,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .html2pptx-page {
   min-height: 100vh;
-  padding: 26px 32px 18px;
+  padding: 26px 32px 76px;
   color: #111827;
   background:
     radial-gradient(circle at 83% 13%, rgba(99, 102, 241, 0.14), transparent 28rem),
@@ -295,7 +296,7 @@ onBeforeUnmount(() => {
 }
 
 .html2pptx-shell {
-  width: min(100%, 1380px);
+  width: 80%;
   margin: 0 auto;
 }
 
@@ -326,11 +327,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 22px rgba(47, 128, 237, 0.28);
 }
 
-.html2pptx-local-tag {
-  border: 0;
-  border-radius: 8px;
-  background: #f0fff4;
-}
 
 .html2pptx-hero,
 .html2pptx-upload-card,
@@ -381,8 +377,9 @@ onBeforeUnmount(() => {
 }
 
 .html2pptx-subtitle {
-  max-width: 720px;
+  max-width: none;
   margin: 18px 0 0;
+  white-space: nowrap;
   color: #64748b;
   font-size: 15px;
   line-height: 1.75;
@@ -487,6 +484,8 @@ onBeforeUnmount(() => {
 
 .html2pptx-sidebar {
   display: flex;
+  max-height: calc(100vh - 326px);
+  min-height: 0;
   flex-direction: column;
   gap: 18px;
 }
@@ -534,11 +533,11 @@ onBeforeUnmount(() => {
 
 .html2pptx-file-panel {
   display: flex;
-  flex: 1;
-  min-height: 420px;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
   padding: 20px;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .html2pptx-panel-title,
@@ -551,6 +550,13 @@ onBeforeUnmount(() => {
 
 .html2pptx-panel-title {
   margin-bottom: 18px;
+}
+
+.html2pptx-file-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .html2pptx-panel-title strong,
@@ -611,7 +617,8 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  margin-top: auto;
+  flex: 0 0 auto;
+  margin-top: 18px;
   padding-top: 22px;
   border-top: 1px solid #e5e7eb;
   color: #94a3b8;
@@ -727,7 +734,15 @@ onBeforeUnmount(() => {
 
 @media (max-width: 720px) {
   .html2pptx-page {
-    padding: 18px;
+    padding: 18px 18px 56px;
+  }
+
+  .html2pptx-shell {
+    width: 100%;
+  }
+
+  .html2pptx-subtitle {
+    white-space: normal;
   }
 
   .html2pptx-hero {
